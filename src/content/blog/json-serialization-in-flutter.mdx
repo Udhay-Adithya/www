@@ -1,0 +1,498 @@
+---
+id: "JS5N8X"
+title: "JSON serialization in Flutter"
+date: "2026-03-06"
+description: "Notes on how JSON works in Flutter, writing fromJson and toJson manually, and eventually using json_serializable to stop doing the repetitive parts by hand."
+category: "Development"
+tags: ["Flutter", "Dart", "JSON", "Serialization", "json_serializable"]
+---
+
+### The problem
+
+Every Flutter app that talks to an internet server eventually has to deal with JSON. And the first time you do it, the process feels fine. You get a response from an API, you print it, you see the data sitting there in a `Map<String, dynamic>`, and you pull out the values with `json['field_name']`. Easy enough.
+
+Then your models get more complex. Nested objects appear. Lists of objects appear. Some fields are optional. Some fields come back with different types depending on the state. Your `fromJson` method grows into something that takes up forty lines and is full of casts and null checks that you are not fully confident about.
+
+Then you add a new field to your model, forget to update `fromJson`, and spend twenty minutes wondering why the field always shows up as null.
+
+That is the path I went through. Writing it down mostly to have it in one place.
+
+---
+
+### What serialization means
+
+**Serialization** is converting a Dart object into a format that can be stored or transmitted, in our case, a JSON string or a `Map<String, dynamic>`.
+
+**Deserialization** is the reverse — taking a JSON string or map and converting it into a Dart object.
+
+In Flutter projects, these two operations are often referred to together as "JSON serialization," which is slightly imprecise but universally understood.
+
+The built-in `dart:convert` package handles the low-level work:
+
+```dart
+import 'dart:convert';
+
+void main() {
+  // Convert a Dart map to a JSON string
+  final map = {'name': 'Arjun', 'age': 22};
+  final jsonString = jsonEncode(map);
+  print(jsonString); // {"name":"Arjun","age":22}
+
+  // Convert a JSON string back to a Dart map
+  final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+  print(decoded['name']); // Arjun
+}
+```
+
+`jsonEncode` and `jsonDecode` from `dart:convert` do this conversion between strings and Dart collections. But `Map<String, dynamic>` is not a typed model, you cannot autocomplete your way through it, and there is nothing stopping you from making a typo like `json['nmae']` and having it silently return null.
+
+That is why we write model classes with `fromJson` and `toJson`.
+
+---
+
+### Writing fromJson and toJson
+
+Starting with a flat model, no nested objects:
+
+```dart
+class Article {
+  final String id;
+  final String title;
+  final String content;
+  final int readTimeMinutes;
+  final bool isPublished;
+
+  const Article({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.readTimeMinutes,
+    required this.isPublished,
+  });
+
+  factory Article.fromJson(Map<String, dynamic> json) {
+    return Article(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String,
+      readTimeMinutes: json['read_time_minutes'] as int,
+      isPublished: json['is_published'] as bool,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'content': content,
+      'read_time_minutes': readTimeMinutes,
+      'is_published': isPublished,
+    };
+  }
+}
+```
+
+Using it:
+
+```dart
+import 'dart:convert';
+
+final jsonString = '''
+{
+  "id": "abc123",
+  "title": "Understanding JSON in Flutter",
+  "content": "Let us start with the basics...",
+  "read_time_minutes": 8,
+  "is_published": true
+}
+''';
+
+final map = jsonDecode(jsonString) as Map<String, dynamic>;
+final article = Article.fromJson(map);
+print(article.title); // Understanding JSON in Flutter
+
+// Serializing back to a map (and then to a string)
+final encoded = jsonEncode(article.toJson());
+print(encoded);
+```
+
+This is fine for smaller projects. It is explicit and easy to debug.
+
+---
+
+### Optional fields
+
+APIs don't always give you everything. Some fields are missing or optional.
+
+Null safety handles this, but it requires being intentional:
+
+```dart
+class UserProfile {
+  final String id;
+  final String name;
+  final String? bio;           // nullable — might not exist
+  final String? avatarUrl;     // nullable
+  final DateTime? lastSeen;    // nullable
+
+  const UserProfile({
+    required this.id,
+    required this.name,
+    this.bio,
+    this.avatarUrl,
+    this.lastSeen,
+  });
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      bio: json['bio'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      lastSeen: json['last_seen'] != null
+          ? DateTime.parse(json['last_seen'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      if (bio != null) 'bio': bio,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
+    };
+  }
+}
+```
+
+Collection-if syntax in `toJson` only includes fields that are not null, which keeps the output clean.
+
+---
+
+### Nested objects
+
+Most real models have at least one nested object. Consider a blog post that has an author:
+
+```dart
+class Author {
+  final String id;
+  final String name;
+  final String handle;
+
+  const Author({
+    required this.id,
+    required this.name,
+    required this.handle,
+  });
+
+  factory Author.fromJson(Map<String, dynamic> json) {
+    return Author(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      handle: json['handle'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'handle': handle,
+    };
+  }
+}
+
+class BlogPost {
+  final String id;
+  final String title;
+  final Author author;
+  final DateTime createdAt;
+
+  const BlogPost({
+    required this.id,
+    required this.title,
+    required this.author,
+    required this.createdAt,
+  });
+
+  factory BlogPost.fromJson(Map<String, dynamic> json) {
+    return BlogPost(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      author: Author.fromJson(json['author'] as Map<String, dynamic>),
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'author': author.toJson(),
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+}
+```
+
+Nested objects just call their own `fromJson` and `toJson`. It composes naturally.
+
+---
+
+### Lists
+
+Lists need each element passed through `fromJson`:
+
+```dart
+class Team {
+  final String id;
+  final String name;
+  final List<UserProfile> members;
+
+  const Team({
+    required this.id,
+    required this.name,
+    required this.members,
+  });
+
+  factory Team.fromJson(Map<String, dynamic> json) {
+    final membersList = json['members'] as List<dynamic>;
+
+    return Team(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      members: membersList
+          .map((item) => UserProfile.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'members': members.map((m) => m.toJson()).toList(),
+    };
+  }
+}
+```
+
+`.map(...).toList()` is the standard way to convert a `List<dynamic>` from JSON into a typed list.
+
+---
+
+### When it gets tedious
+
+This is fine until you have a lot of models. Then it starts to add up.
+
+Every field addition means updating three places, the class, `fromJson`, and `toJson`. Forget one and you won't get a compile error, just a quiet runtime bug.
+
+The `fromJson` methods are mechanical enough that writing them by hand starts to feel wasteful.
+
+---
+
+### Using json_serializable
+
+`json_serializable` generates `fromJson` and `toJson` from annotations. You annotate the class, run a code generator, and it writes the serialization logic.
+
+First, update your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  json_serializable: ^6.8.0
+```
+
+Run `flutter pub get`, then annotate the model:
+
+```dart
+import 'package:json_annotation/json_annotation.dart';
+
+part 'article.g.dart';
+
+@JsonSerializable()
+class Article {
+  final String id;
+  final String title;
+  final String content;
+
+  @JsonKey(name: 'read_time_minutes')
+  final int readTimeMinutes;
+
+  @JsonKey(name: 'is_published')
+  final bool isPublished;
+
+  const Article({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.readTimeMinutes,
+    required this.isPublished,
+  });
+
+  factory Article.fromJson(Map<String, dynamic> json) =>
+      _$ArticleFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ArticleToJson(this);
+}
+```
+
+Then run the code generator:
+
+```bash
+dart run build_runner build
+```
+
+The generated `article.g.dart` contains all the serialization code. You don't edit it directly. Add a field to the class and run the generator again.
+
+The `@JsonKey(name: 'read_time_minutes')` annotation maps the Dart field `readTimeMinutes` to the JSON key `read_time_minutes`. Without it, `json_serializable` would look for a key called `readTimeMinutes` in the JSON, which most snake_case APIs do not provide.
+
+You can set a global naming convention in `build.yaml` to avoid annotating every field:
+
+```yaml
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          field_rename: snake
+```
+
+After this, camelCase Dart fields automatically map to snake_case JSON keys everywhere.
+
+---
+
+### Nested objects with json_serializable
+
+Nested objects just need the same annotation:
+
+```dart
+import 'package:json_annotation/json_annotation.dart';
+
+part 'blog_post.g.dart';
+
+@JsonSerializable()
+class Author {
+  final String id;
+  final String name;
+  final String handle;
+
+  const Author({required this.id, required this.name, required this.handle});
+
+  factory Author.fromJson(Map<String, dynamic> json) =>
+      _$AuthorFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AuthorToJson(this);
+}
+
+@JsonSerializable()
+class BlogPost {
+  final String id;
+  final String title;
+  final Author author;
+  final DateTime createdAt;
+  final List<String> tags;
+
+  const BlogPost({
+    required this.id,
+    required this.title,
+    required this.author,
+    required this.createdAt,
+    required this.tags,
+  });
+
+  factory BlogPost.fromJson(Map<String, dynamic> json) =>
+      _$BlogPostFromJson(json);
+
+  Map<String, dynamic> toJson() => _$BlogPostToJson(this);
+}
+```
+
+After running `build_runner`, the nested `Author` and the `List<String>` are handled automatically. `DateTime` works out of the box too.
+
+---
+
+### Enums
+
+Enums in JSON come through as strings. `json_serializable` handles the conversion if you annotate the enum:
+
+```dart
+import 'package:json_annotation/json_annotation.dart';
+
+@JsonEnum(valueField: 'key')
+enum PostStatus {
+  draft(key: 'draft'),
+  published(key: 'published'),
+  archived(key: 'archived');
+
+  const PostStatus({required this.key});
+  final String key;
+}
+
+@JsonSerializable()
+class Post {
+  final String id;
+  final PostStatus status;
+
+  const Post({required this.id, required this.status});
+
+  factory Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
+  Map<String, dynamic> toJson() => _$PostToJson(this);
+}
+```
+
+Regenerate after this. The generated code handles the string-to-enum conversion.
+
+---
+
+### Watch mode
+
+Running the build manually every time you change a model gets old. Use watch mode instead:
+
+```bash
+dart run build_runner watch
+```
+
+It watches for changes and regenerates automatically. This is what I use day-to-day.
+
+If there are conflicts, run:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+---
+
+### Where models live
+
+In a project following Clean Architecture or a layered structure, JSON-aware models usually live in the **data layer**, specifically in something like `lib/features/feature_name/data/models/`. These models know about JSON because they are responsible for converting raw API data into clean domain objects.
+
+The domain layer typically has its own entity classes with no JSON dependencies. The data models do the parsing, then convert into domain entities before passing them up.
+
+Not mandatory in smaller projects, but useful once the app grows.
+
+---
+
+### Things that tripped me up
+
+The most common one is forgetting to run `build_runner` after modifying a model. The `.g.dart` file falls out of sync, and you get errors that look confusing because they reference generated code. The fix is always the same: run the generator again.
+
+Another thing that bit me was casting. If the API sends `"count": 4.0` (a double), the cast throws. A safer approach:
+
+```dart
+readCount: (json['read_count'] as num).toInt(),
+```
+
+Using `num` as the intermediate type and then calling `toInt()` handles both cases.
+
+Also: assuming fields can't be null when the API doesn't guarantee that. Until the docs clearly say a field is always present, treat it as nullable.
+
+---
+
+Manual `fromJson`/`toJson` is fine for smaller projects, and writing it by hand at least once helps you understand what the generator produces. Once you have enough models that adding a field starts to feel like busywork, `json_serializable` is worth setting up. The pattern doesn't change, you are just not writing the boilerplate yourself anymore.

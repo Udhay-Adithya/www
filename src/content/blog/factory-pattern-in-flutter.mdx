@@ -1,0 +1,397 @@
+---
+id: "FT4C3Y"
+title: "Factory constructors in Dart"
+date: "2026-03-06"
+description: "Notes on what factory constructors are in Dart, how they differ from regular constructors, and the places I keep running into them."
+category: "Development"
+tags: ["Flutter", "Dart", "Design Patterns", "Factory", "Clean Code"]
+---
+
+I write `factory Article.fromJson(json)` in every model I make. Used it without really thinking about why it's written that way. Looked into what factory constructors actually are, and writing the notes down here.
+
+---
+
+### What a regular constructor does
+
+To understand factory constructors, it helps to be clear on what a regular one does first.
+
+When you write `MyClass()`, Dart allocates memory for a new object of type `MyClass`, runs the constructor body, and hands you that fresh object. Every time. No exceptions.
+
+```dart
+class UserProfile {
+  final String name;
+  final int age;
+
+  UserProfile(this.name, this.age);
+}
+
+void main() {
+  final user1 = UserProfile('Arjun', 22);
+  final user2 = UserProfile('Arjun', 22);
+
+  print(user1 == user2); // false — two different objects in memory
+}
+```
+
+These two objects have the same data, but they are distinct instances. That is what a regular constructor does by default.
+
+A **factory constructor** breaks this rule.
+
+---
+
+### The factory keyword
+
+In Dart, when you prefix a constructor with the `factory` keyword, you are telling the Dart runtime: this constructor is not guaranteed to always create a new instance. Instead, it can return any object of the appropriate type, including an existing one, a cached one, or even an instance of a subclass.
+
+The most immediate consequence of this is that factory constructors cannot use `this` to refer to the object being created, because there may not be a new object being created at all. You cannot initialize fields directly inside a factory constructor the way you can in a regular one. You write logic and at the end return something.
+
+Here is the simplest possible factory constructor:
+
+```dart
+class AppConfig {
+  final String baseUrl;
+  final bool isDebugMode;
+
+  AppConfig._internal(this.baseUrl, this.isDebugMode);
+
+  factory AppConfig.create({required bool debug}) {
+    if (debug) {
+      return AppConfig._internal('https://dev.api.example.com', true);
+    } else {
+      return AppConfig._internal('https://api.example.com', false);
+    }
+  }
+}
+
+void main() {
+  final config = AppConfig.create(debug: true);
+  print(config.baseUrl); // https://dev.api.example.com
+}
+```
+
+The regular constructor is marked `_internal`, making it private. The `factory AppConfig.create` is the only public way to get an `AppConfig`. That gives control over how instances are created, which a regular constructor can't do.
+
+---
+
+### Parsing JSON
+
+This one shows up in almost every Flutter project that works with an API:
+
+```dart
+class Article {
+  final String id;
+  final String title;
+  final String content;
+  final DateTime publishedAt;
+
+  Article({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.publishedAt,
+  });
+
+  factory Article.fromJson(Map<String, dynamic> json) {
+    return Article(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String,
+      publishedAt: DateTime.parse(json['published_at'] as String),
+    );
+  }
+}
+```
+
+The reason `fromJson` is a factory and not a regular constructor is that the logic involved, pulling values from a map, type-casting them, converting the date string, belongs outside the regular constructor initialization list. A regular named constructor in Dart runs before the object is fully initialized, which makes complex logic awkward to write. The factory constructor gives you a full function body to work with.
+
+Using it is straightforward:
+
+```dart
+final json = {
+  'id': 'abc123',
+  'title': 'Understanding Factories',
+  'content': 'Factories are...',
+  'published_at': '2025-06-10T09:00:00Z',
+};
+
+final article = Article.fromJson(json);
+print(article.title); // Understanding Factories
+```
+
+It is clean and easy to test, which is probably why it became the standard.
+
+---
+
+### Singletons
+
+Another place factory constructors come up is when you only want one instance of something to ever exist.
+
+Here is how you implement a singleton using a factory constructor in Dart:
+
+```dart
+class DatabaseService {
+  static DatabaseService? _instance;
+
+  // Private regular constructor
+  DatabaseService._internal();
+
+  // Factory constructor returns the cached instance
+  factory DatabaseService() {
+    _instance ??= DatabaseService._internal();
+    return _instance!;
+  }
+
+  Future<void> connect(String connectionString) async {
+    // Actual connection logic
+    print('Connected to: $connectionString');
+  }
+
+  Future<List<Map<String, dynamic>>> query(String sql) async {
+    // Query logic
+    return [];
+  }
+}
+
+void main() {
+  final db1 = DatabaseService();
+  final db2 = DatabaseService();
+
+  print(db1 == db2); // true — same instance
+}
+```
+
+The `??=` operator is doing the heavy lifting here. It assigns `_instance` only if it is currently null. After the first call to `DatabaseService()`, `_instance` is set, and every subsequent call returns that same object.
+
+This is a pattern I use frequently for services in Flutter apps. Things like `AuthService`, `StorageService`, or `ApiClient` are good candidates.
+
+---
+
+### Returning subtypes
+
+One thing a regular constructor cannot do is return an instance of a subclass. Factory constructors can. This is useful when you want calling code to work with an abstract type without needing to know which concrete type it gets.
+
+```dart
+abstract class NotificationService {
+  void send(String message, String recipient);
+
+  factory NotificationService(String type) {
+    switch (type) {
+      case 'email':
+        return EmailNotificationService();
+      case 'sms':
+        return SmsNotificationService();
+      case 'push':
+        return PushNotificationService();
+      default:
+        throw ArgumentError('Unknown notification type: $type');
+    }
+  }
+}
+
+class EmailNotificationService implements NotificationService {
+  @override
+  void send(String message, String recipient) {
+    print('Sending email to $recipient: $message');
+  }
+}
+
+class SmsNotificationService implements NotificationService {
+  @override
+  void send(String message, String recipient) {
+    print('Sending SMS to $recipient: $message');
+  }
+}
+
+class PushNotificationService implements NotificationService {
+  @override
+  void send(String message, String recipient) {
+    print('Sending push notification to $recipient: $message');
+  }
+}
+```
+
+Using it looks like this:
+
+```dart
+void main() {
+  final notifier = NotificationService('email');
+  notifier.send('Your order has shipped.', 'user@example.com');
+  // Sending email to user@example.com: Your order has shipped.
+
+  final smsNotifier = NotificationService('sms');
+  smsNotifier.send('Your OTP is 482910.', '+91-9876543210');
+  // Sending SMS to +91-9876543210: Your OTP is 482910.
+}
+```
+
+Calling code just asks for the type it wants and the factory handles which concrete class gets returned. Adding a new notification channel later doesn't require changing anything in the calling code.
+
+---
+
+### Caching
+
+Sometimes creating the same object repeatedly is wasteful, especially if initializing it is expensive.
+
+A factory constructor can maintain an internal cache:
+
+```dart
+class IconAsset {
+  final String name;
+  final String path;
+
+  IconAsset._({required this.name, required this.path});
+
+  static final Map<String, IconAsset> _cache = {};
+
+  factory IconAsset(String name) {
+    if (_cache.containsKey(name)) {
+      return _cache[name]!;
+    }
+
+    final asset = IconAsset._(
+      name: name,
+      path: 'assets/icons/$name.svg',
+    );
+
+    _cache[name] = asset;
+    return asset;
+  }
+}
+
+void main() {
+  final icon1 = IconAsset('home');
+  final icon2 = IconAsset('home');
+
+  print(icon1 == icon2);  // true — retrieved from cache
+  print(icon1.path);      // assets/icons/home.svg
+}
+```
+
+In Flutter this comes up with asset wrappers, theme objects, or anything that gets loaded once and reused.
+
+---
+
+### Validation
+
+Since a factory constructor is just a full function body, you can also do validation inside it and throw before returning anything.
+
+```dart
+class EmailAddress {
+  final String value;
+
+  EmailAddress._internal(this.value);
+
+  factory EmailAddress(String input) {
+    final trimmed = input.trim().toLowerCase();
+
+    if (trimmed.isEmpty) {
+      throw ArgumentError('Email address cannot be empty.');
+    }
+
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(trimmed)) {
+      throw ArgumentError('"$trimmed" is not a valid email address.');
+    }
+
+    return EmailAddress._internal(trimmed);
+  }
+}
+
+void main() {
+  try {
+    final email = EmailAddress('  USER@Example.COM  ');
+    print(email.value); // user@example.com
+
+    final bad = EmailAddress('not-an-email');
+  } catch (e) {
+    print(e); // ArgumentError: "not-an-email" is not a valid email address.
+  }
+}
+```
+
+This is sometimes called a value object. Once the object exists, you know it passed validation. You don't need to check again somewhere else.
+
+---
+
+### Putting it together
+
+Here is how some of these patterns look in a real context:
+
+```dart
+class UserRepository {
+  final ApiClient _client;
+
+  UserRepository(this._client);
+
+  Future<User> fetchUser(String userId) async {
+    final response = await _client.get('/users/$userId');
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+        code: response.statusCode,
+        message: response.body['error'] ?? 'Unknown error',
+      );
+    }
+
+    return User.fromJson(response.body);
+  }
+
+  Future<List<User>> fetchTeamMembers(String teamId) async {
+    final response = await _client.get('/teams/$teamId/members');
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+        code: response.statusCode,
+        message: response.body['error'] ?? 'Unknown error',
+      );
+    }
+
+    final List<dynamic> data = response.body['members'];
+    return data.map((json) => User.fromJson(json)).toList();
+  }
+}
+
+class User {
+  final String id;
+  final String name;
+  final String email;
+  final UserRole role;
+
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      role: UserRole.fromString(json['role'] as String),
+    );
+  }
+}
+
+enum UserRole {
+  admin,
+  member,
+  viewer;
+
+  static UserRole fromString(String value) {
+    return switch (value) {
+      'admin' => UserRole.admin,
+      'member' => UserRole.member,
+      'viewer' => UserRole.viewer,
+      _ => throw ArgumentError('Unknown role: $value'),
+    };
+  }
+}
+```
+
+All the parsing happens in one place. If the API changes a field name, there is one method to update.
+
+---
+
+Factory constructors show up a lot in Flutter, in API models, services, and singletons. Was copying the pattern for a while without really understanding it. The main thing is just knowing it is a full function that returns something, and that something doesn't have to be a fresh allocation every time.

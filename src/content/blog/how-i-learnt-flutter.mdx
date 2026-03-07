@@ -1,32 +1,138 @@
 ---
 id: "FL3RN2"
-title: "My Journey of Learning Flutter"
+title: "How I learnt Flutter"
 date: "2025-05-25"
-description: "A fun story of how I learnt Flutter by building a real project and how you can learn it too (without burning out)."
+description: "I started with no plan, broke everything, started over, and eventually built something that worked. Just a log of what happened."
 category: "Development"
 tags: ["Flutter", "Dart", "Mobile Development", "Personal"]
 ---
 
-My journey with **Flutter** started at the beginning of 2024. It wasn't because I wanted to learn a new technology for the sake of it, but because I had a real problem to solve. I wanted to build a mobile app for my university, VIT-AP, to make life easier for students. The idea of creating something that my friends and I could use every day was incredibly exciting, but there was one small problem: I had absolutely no idea how to build mobile apps.
+### Where it started
 
-So, I did what any excited and slightly impatient person would do — I jumped right in. I didn't follow any tutorials or read any documentation. Instead, I opened up ChatGPT and started asking it to write code for me. My "development" process was simple: ask the AI, copy the code, and paste it into my project.
+Early 2024, I was a second-year student at VIT-AP, and I was frustrated. Every time I needed information about my college, timetables, attendance, announcements, I had to navigate through a slow, clunky website on my phone. It was the kind of thing where you open it, wait for it to load, and then spend another minute trying to find the button you actually wanted.
 
-For a little while, it felt like magic. I was building screens and adding buttons without knowing what I was doing. But the magic quickly wore off. Most of the time, the code didn't work. I would spend hours trying to fix errors that I didn't understand. My project, the **VITAP Student App**, became a tangled mess of files and code that was impossible to manage. Adding a new feature felt like performing surgery in the dark. I knew I had to change my approach.
+I thought, someone should build an app for this. And then slowly that thought shifted to: why not me?
 
-That's when I discovered **Rivaan Ranawat's YouTube channel**, and it was a complete game-changer. His videos were exactly what I needed. He explained complex topics like "Clean Architecture" and "MVVM" in a way that finally made sense to me. He had tutorials on everything from state management with BLoC and Riverpod to testing. His channel became my go-to resource, and I honestly believe it saved my project. If you're starting with Flutter, I can't recommend his channel enough.
+The only problem was that I had never built a mobile app in my life. I had written Java in class. I had made a few small web pages. But mobile development was a completely different world, and I had no idea where to even begin.
 
-Inspired, I decided to start over, but this time, I would do it the right way. I created a structured learning path for myself.
+---
 
-First, I focused on learning **Dart**, the programming language that Flutter is built on. Since I already knew object-oriented programming from Java, Dart felt quite familiar. I just had to get used to a few new concepts like null safety, mixins, and how it handles asynchronous programming.
+### The wrong start
 
-Once I had a decent grasp of Dart, I moved on to **Flutter basics**. I learned about "widgets," which are like the building blocks of a Flutter app. You combine them to create your UI, from a simple button to a complex screen layout. I spent time understanding how to arrange these widgets to build beautiful and responsive layouts.
+I want to be honest about this part because I think a lot of people skip over it when they write about how they learned something.
 
-Next, I tackled the big one: **state management**. In simple terms, "state" is just any data in your app that can change over time. State management is how you handle those changes. In the Flutter world, the two most popular choices are **BLoC** and **Riverpod**. I decided to try both. BLoC felt very structured and a bit formal, making you separate your business logic from your UI very strictly. This is great for large, complex apps where you need things to be predictable. Riverpod, on the other hand, felt more modern and flexible, with less boilerplate code. My advice is to try both and see which one clicks for you.
+I did not start the proper way. I did not read documentation, watch tutorials, or follow any structured plan. What I did was open ChatGPT and start asking it to write code.
 
-After getting comfortable with state management, I dove into **architectural patterns** like **MVVM (Model-View-ViewModel)** and **Clean Architecture**. This is when my app started to feel like a real, professional project. These patterns are like blueprints for your code, helping you keep everything organized, testable, and easy to maintain.
+For about two weeks, that actually felt like it was working. Screens appeared. Buttons existed. The app looked like an app. I was typing things like "write me a Flutter screen that shows a list of students" and getting back code that, when pasted in, would actually compile.
 
-Finally, I learned about **testing in Flutter**. I learned how to write unit tests for my logic, widget tests for my UI components, and integration tests to ensure the entire app worked as expected. This gave me the confidence to add new features without worrying about breaking something else.
+But I did not understand a single line of any of it. I was a middleman between the AI and the IDE.
 
-Looking back, my path to learning Flutter was a bit chaotic, but it was also a lot of fun. I learned that it's okay to make a mess as long as you're willing to clean it up and learn from your mistakes. Building a real project from day one was a powerful motivator, and it made the late-night debugging sessions feel worthwhile.
+It all fell apart the moment I needed to make changes. I wanted to add something small — a loading indicator, maybe — and I couldn't figure out where to put it because I had no mental model of how the code was structured. I would ask ChatGPT to fix it, it would generate something new, I would paste it over the old code, and now something else would break. This went on for a while before I finally admitted to myself that I was going in circles.
 
-So, if you're thinking about learning Flutter, my advice is to just start. Build something you're passionate about, don't be afraid to break things, and lean on the amazing community and creators out there. It's a rewarding journey, and seeing your app come to life is one of the best feelings in the world.
+The codebase I had built was genuinely unreadable. Files with no clear purpose. Widget trees nested so deep that scrolling through them made me feel dizzy. State being passed around in ways that even the AI couldn't explain properly.
+
+That was the low point. I had spent weeks on something and had nothing solid to show for it.
+
+---
+
+### Starting over
+
+I deleted the project. Well, I archived it. I still have that original mess sitting in a folder somewhere, and occasionally I open it just to remind myself where I started.
+
+Then I went looking for a proper way to learn.
+
+I found **Rivaan Ranawat's YouTube channel**. His videos are not beginner fluff. He does not spend twenty minutes explaining what a variable is. He walks you through real concepts, Clean Architecture, state management with BLoC and Riverpod, testing, with actual code and actual reasoning.
+
+What changed for me watching his videos was not just that I learned Flutter. It was that I started to understand *why* code is written a certain way. That distinction matters a lot more than people give it credit for.
+
+---
+
+### Learning Dart
+
+Before touching Flutter widgets again, I sat down and properly learned **Dart**.
+
+Since I already knew Java, the syntax was not completely foreign. But Dart has a few things that caught me off guard, null safety being the biggest one. In Dart, the type system actually forces you to think about whether a value can be null or not, and in the beginning, that felt like an annoying extra step. Later, it started feeling like a seat belt. A minor inconvenience that saves you from something much worse.
+
+Mixins were another thing I had to sit with for a while. The concept is not complicated once it clicks, but the first few times I encountered them I just stared at the screen.
+
+Async programming in Dart, Futures, async/await, Streams, is deeply integrated into how Flutter works. Getting comfortable with that early saved me a lot of pain later.
+
+---
+
+### Widgets
+
+Once I started learning Flutter properly, the first real shift in my understanding came when I stopped thinking about widgets as "UI components" and started thinking about them as **descriptions of what should be on screen**.
+
+In Flutter, everything is a widget — the screen itself, the padding around a button, the button, the text inside the button. You build your UI by combining these descriptions into a tree, and Flutter takes that tree and renders it.
+
+This sounds simple but it takes a while to actually land. The moment it did, I stopped fighting the layout system. I stopped randomly wrapping things in `Padding` and hoping it worked. I started being deliberate about the widget tree because I understood what I was building.
+
+Layouts in Flutter, `Row`, `Column`, `Stack`, `Expanded`, `Flexible`, have rules. Once you understand those rules, most layout problems become solvable. Before that, it feels like guessing.
+
+---
+
+### State management
+
+State management is the thing that trips up almost everyone learning Flutter. It tripped me up too.
+
+The concept itself is not mysterious. **State** is any data in your app that can change, the content of a text field, whether a button is loading, the list of items fetched from an API. **State management** is how you decide where that data lives and how different parts of your app respond when it changes.
+
+Flutter's built-in tools like `setState` work fine for small, isolated things. But once your app has real depth, screens that depend on each other's data, logic that should not live inside a widget, you need something more organized.
+
+I tried both **BLoC** and **Riverpod**, and I think that was the right call instead of just picking one.
+
+BLoC is rigid in a way that initially feels restrictive but later feels reassuring. It forces you into a strict pattern: events come in, states go out, and your UI just reacts. The boilerplate is heavier, but with large teams or large apps, that structure is genuinely valuable because everyone knows where to look for things.
+
+Riverpod is more flexible. It feels more natural to write and has less ceremony around it. For solo projects or smaller codebases, I found it faster to move with. The newer versions also handle dependency injection in a way that I think is actually elegant.
+
+I think trying both was worth it. You start to notice when each one fits the situation better, which is something you can't really get from just reading about them.
+
+---
+
+### Architecture
+
+I avoided learning about architectural patterns longer than I should have. They sounded theoretical, and I wanted to write code that did things, not code that followed patterns for the sake of it.
+
+That changed when I tried to add a new feature to my rebuilt app and realized I genuinely didn't know where to put it. Should this logic go in the widget? In a service class? In the state management layer?
+
+That confusion is exactly what **Clean Architecture** and **MVVM** solve.
+
+The core idea, when you strip away all the jargon: keep your business logic, the actual rules and operations of your application, away from your UI code and away from your data layer. Each piece has one job. The UI knows how to display things. The data layer knows how to fetch and store things. The logic layer knows what to do with the data.
+
+When these are separated properly, you can change your API without touching your UI. You can test your business logic without running the app. You can add a new screen without worrying about breaking something on another screen.
+
+The **VITAP Student App** was rebuilt around this structure. It's not a perfect codebase, but it's one where I can open any file and immediately understand what it's responsible for. That alone is worth every hour I spent learning architecture.
+
+---
+
+### Testing
+
+I postponed writing tests for a long time. There was always something more urgent to build, and tests felt like extra work on top of already finished work.
+
+Then I changed something in the app's authentication flow, and without realizing it, I broke the way the attendance screen loaded data. I didn't catch this for three days, and a few people using the app ran into it.
+
+After that, I wrote tests.
+
+Flutter has three kinds: **unit tests** for your individual logic functions, **widget tests** for verifying that your UI renders and behaves correctly in isolation, and **integration tests** for running the whole app and checking end-to-end flows.
+
+I am not going to pretend I write comprehensive tests for everything now. But I write them for anything important, authentication, data parsing, core business logic. That small habit has saved me from a few regressions.
+
+---
+
+### What it actually felt like
+
+Learning Flutter was not a smooth upward line. It was more like: confusion, a small breakthrough, more confusion in a different area, another breakthrough, and so on. The confusion periods were longer than I expected, and the breakthroughs were smaller but more satisfying than I expected.
+
+There were nights where I sat staring at a state management problem for two hours before finally understanding what was happening. There were afternoons where something that should have taken twenty minutes took three. There was one particularly bad weekend where a layout refused to behave and I seriously questioned whether I was cut out for this.
+
+But there were also the other moments. The first time the app fetched real data from the college's API and displayed it correctly. The first time I refactored a messy chunk of code into something clean and felt the difference. The first time a friend opened the app on their phone and said, without any prompting, that it was faster than the website.
+
+Those moments made the rest of it worth it.
+
+---
+
+### Looking back
+
+The thing that made it click was having a real project from the start. Not a tutorial counter but something I actually wanted to use every day. Every concept felt necessary because it was. You don't really understand why architecture matters until you've tried to add a feature to a codebase that has none.
+
+Still figuring things out. Still hit problems I don't immediately know how to solve. That part doesn't seem to go away, it just becomes more familiar.

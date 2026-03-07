@@ -1,0 +1,181 @@
+---
+id: SG6T1W
+title: Singleton pattern and get_it in Flutter
+date: "2026-03-06"
+description: I use get_it in almost every Flutter project. Took a closer look at what it actually does under the hood.
+category: Flutter
+tags: [flutter, dart, design-patterns, get_it, dependency-injection]
+---
+
+I use `get_it` almost automatically when starting a Flutter project. It is just there, setting up services, wiring things together. Never really stopped to think about what it is doing or why it works the way it does. Looked into it recently. Writing it down here.
+
+## what is a singleton
+
+A singleton is a class that only ever has one instance. You ask for it ten times across ten different files, and you always get the same object back.
+
+That is the whole idea.
+
+In Dart, the simplest way to do it manually is with a private constructor and a static field:
+
+```dart
+class AuthService {
+  AuthService._();
+
+  static final AuthService instance = AuthService._();
+
+  bool isLoggedIn = false;
+
+  Future<void> login(String email, String password) async {
+    // login logic
+    isLoggedIn = true;
+  }
+}
+```
+
+`AuthService._()` is a named private constructor. Nothing outside the class can call it. `AuthService.instance` is the one object that gets created when the class is first loaded, and that same object is returned every time.
+
+Usage looks like this:
+
+```dart
+await AuthService.instance.login(email, password);
+```
+
+That works fine for a small project.
+
+## where manual singletons get awkward
+
+The `AuthService.instance` pattern ties you to a specific class. Everywhere you call `AuthService.instance`, you have imported `AuthService` directly and grabbed its static field.
+
+This makes testing hard. If you want to swap out `AuthService` with a fake `MockAuthService` in a test, you cannot easily do it because every call site has `AuthService.instance` hardcoded.
+
+It also scatters access all over the place. With many services, every file ends up importing and calling `SomeService.instance`, `AnotherService.instance`, and so on.
+
+`get_it` solves both of these.
+
+## what get_it is
+
+`get_it` is a service locator. You register objects with it in one place, then look them up by their type anywhere in the app.
+
+Nothing from the concrete class leaks into the call sites. If you register `AuthService` as an `AuthService`, or better, as an `IAuthService` interface, your widgets and other classes only need to know the interface. Swapping it for a mock in tests is just re-registering a different implementation.
+
+Add it to `pubspec.yaml`:
+
+```yaml
+dependencies:
+  get_it: ^7.7.0
+```
+
+## setting it up
+
+The convention is to create a `locator.dart` file (some people call it `injection.dart` or `di.dart`) and initialize everything there:
+
+```dart
+import 'package:get_it/get_it.dart';
+
+final sl = GetIt.instance;
+
+void setupLocator() {
+  sl.registerLazySingleton<AuthService>(() => AuthService());
+  sl.registerLazySingleton<ApiClient>(() => ApiClient());
+}
+```
+
+Then call `setupLocator()` in `main.dart` before `runApp`:
+
+```dart
+void main() {
+  setupLocator();
+  runApp(const MyApp());
+}
+```
+
+`sl` is just a shorthand. You see it a lot in Flutter codebases. It stands for nothing particular, just a convention.
+
+## registerSingleton vs registerLazySingleton
+
+`registerSingleton` creates the object immediately when you register it:
+
+```dart
+sl.registerSingleton<AuthService>(AuthService());
+```
+
+`registerLazySingleton` creates it the first time something asks for it:
+
+```dart
+sl.registerLazySingleton<AuthService>(() => AuthService());
+```
+
+For most things, lazy is fine. The object is created only when it is actually needed, not at startup.
+
+Use `registerSingleton` if the object needs to exist immediately, for example if it starts a background process or initializes something on construction.
+
+## registerFactory
+
+There is also `registerFactory`, which creates a new instance every time you call `sl<SomeClass>()`:
+
+```dart
+sl.registerFactory<SomeViewModel>(() => SomeViewModel());
+```
+
+Not a singleton at all, it is just `get_it` managing construction. Useful for ViewModels or Blocs that you want fresh each time a screen opens.
+
+## accessing instances
+
+Once things are registered, you just call `sl<T>()`:
+
+```dart
+final authService = sl<AuthService>();
+await authService.login(email, password);
+```
+
+You can do this anywhere, in a widget, a ViewModel, another service. As long as `setupLocator()` ran before `runApp`, everything is available.
+
+## a small example
+
+Here is a more complete setup with two services where one depends on the other:
+
+```dart
+// api_client.dart
+class ApiClient {
+  Future<Map<String, dynamic>> get(String path) async {
+    // make HTTP request
+  }
+}
+
+// auth_service.dart
+class AuthService {
+  final ApiClient _apiClient;
+
+  AuthService(this._apiClient);
+
+  Future<bool> login(String email, String password) async {
+    final response = await _apiClient.get('/login');
+    return response['success'] == true;
+  }
+}
+
+// locator.dart
+void setupLocator() {
+  sl.registerLazySingleton<ApiClient>(() => ApiClient());
+  sl.registerLazySingleton<AuthService>(() => AuthService(sl<ApiClient>()));
+}
+```
+
+`sl<ApiClient>()` inside the factory function resolves `ApiClient` from the locator. Because `ApiClient` is already registered as a lazy singleton, the same instance gets passed into every `AuthService` that is created.
+
+## testing
+
+For tests, you can reset the locator and register fakes:
+
+```dart
+setUp(() {
+  sl.reset();
+  sl.registerSingleton<AuthService>(MockAuthService());
+});
+```
+
+Code that calls `sl<AuthService>()` will get the mock. You do not have to change anything in the files being tested.
+
+## closing note
+
+`get_it` is not doing anything magical. It is a map from types to factory functions, with some logic for caching singleton instances. Understanding that makes the API a lot less mysterious. `registerLazySingleton` stores a factory, calls it once, caches the result. `registerFactory` stores a factory, calls it fresh every time. `sl<T>()` looks up by type, runs the factory if needed, returns the instance.
