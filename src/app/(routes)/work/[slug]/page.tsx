@@ -42,7 +42,7 @@ export default async function WorkPage({ params }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-background py-12 px-4">
+        <div className="flex-1 bg-background py-12 px-4">
             <article className="prose prose-lg dark:prose-invert max-w-2xl mx-auto">
                 {/* Company logo/image - if available */}
                 {work.frontmatter.image && (

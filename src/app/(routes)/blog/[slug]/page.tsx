@@ -38,7 +38,7 @@ export default async function BlogPage({ params }: Props) {
     const readingTime = Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="flex-1 bg-background">
             {/* Simple navigation */}
             <nav className="border-b border-border/30">
                 <div className="max-w-7xl mx-auto px-6 py-4">

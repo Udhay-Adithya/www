@@ -4,7 +4,7 @@ import LinkButtons from "@/components/homepage/link-buttons";
 
 export default function Home() {
   return (
-    <main className="flex flex-col min-h-screen items-start justify-center px-4 bg-background text-foreground">
+    <main className="flex flex-1 flex-col items-start justify-center px-4 py-12 bg-background text-foreground">
       <Intro />
       <LinkButtons />
     </main>

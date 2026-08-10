@@ -39,7 +39,7 @@ export default async function ProjectPage({ params }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-background py-12 px-4">
+        <div className="flex-1 bg-background py-12 px-4">
             <article className="prose prose-lg dark:prose-invert max-w-2xl mx-auto">
                 {/* Project header */}
                 <div className="mb-10 border-b border-border pb-6 text-center">

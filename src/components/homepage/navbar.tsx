@@ -16,7 +16,7 @@ export default function Navbar() {
 
     return (
         <>
-            <nav className="flex justify-between items-center py-6 md:px-4 md:pl-16 md:pr-16 pl-4 pr-8 bg-black text-white relative z-50">
+            <nav className="flex shrink-0 justify-between items-center py-6 md:px-4 md:pl-16 md:pr-16 pl-4 pr-8 bg-black text-white relative z-50">
                 <div className="text-sm md:text-base">
                     <Link href="/">udhay adithya</Link>
                 </div>

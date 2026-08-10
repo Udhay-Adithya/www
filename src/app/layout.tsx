@@ -48,7 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${petemoss.variable}`}>
-      <body className={`antialiased ${inter.className}`}>
+      <body className={`antialiased flex min-h-dvh flex-col ${inter.className}`}>
         <Navbar />
         {children}
       </body>

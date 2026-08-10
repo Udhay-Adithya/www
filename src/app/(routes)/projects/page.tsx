@@ -7,7 +7,7 @@ export default function ProjectsListPage() {
     const projects = getAllProjects();
 
     return (
-        <div className="min-h-screen max-w-4xl mx-auto bg-background text-foreground px-4 py-16">
+        <div className="flex-1 max-w-4xl mx-auto bg-background text-foreground px-4 py-16">
             <SectionHeader
                 title="projects"
                 primaryText="building"
