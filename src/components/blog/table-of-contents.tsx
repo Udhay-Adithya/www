@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronRight, List } from 'lucide-react';
 
 interface Heading {
     id: string;
@@ -12,7 +11,6 @@ interface Heading {
 export default function TableOfContents() {
     const [headings, setHeadings] = useState<Heading[]>([]);
     const [activeId, setActiveId] = useState<string>('');
-    const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
         // Extract headings from the blog content
@@ -77,60 +75,39 @@ export default function TableOfContents() {
                 behavior: 'smooth',
                 block: 'start'
             });
-            setIsOpen(false); // Close mobile menu after navigation
         }
     };
 
-    if (headings.length === 0) {
+    // Not worth the space on a short post
+    if (headings.length < 3) {
         return null;
     }
 
+    // Indent relative to the shallowest heading in the post rather than to h1,
+    // so a post written entirely in h2s doesn't render uniformly indented.
+    const baseLevel = Math.min(...headings.map((heading) => heading.level));
+
     return (
-        <>
-            {/* Mobile Toggle Button */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="lg:hidden flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 p-2 border border-border/30 rounded-lg bg-background/50 backdrop-blur-sm"
-            >
-                <List className="w-4 h-4" />
-                Table of Contents
-                <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-            </button>
-
-            {/* Table of Contents */}
-            <div className={`
-                lg:block
-                ${isOpen ? 'block' : 'hidden'}
-                bg-background/80 backdrop-blur-sm border border-border/30 rounded-lg p-4
-                lg:bg-transparent lg:border-none lg:backdrop-blur-none lg:p-0
-            `}>
-                <h3 className="text-sm font-medium text-foreground mb-3 lg:text-muted-foreground">
-                    On this page
-                </h3>
-
-                <nav className="space-y-1">
-                    {headings.map((heading) => (
+        <nav aria-label="On this page" className="mb-16 border-l border-border pl-5">
+            <p className="text-sm text-muted-foreground mb-3">on this page</p>
+            <ul className="space-y-1.5">
+                {headings.map((heading) => (
+                    <li
+                        key={heading.id}
+                        style={{ paddingLeft: `${(heading.level - baseLevel) * 0.75}rem` }}
+                    >
                         <button
-                            key={heading.id}
                             onClick={() => scrollToHeading(heading.id)}
-                            className={`
-                                block w-full text-left text-sm transition-colors py-1 px-2 rounded
-                                ${heading.level === 1 ? 'font-medium' : ''}
-                                ${heading.level === 2 ? 'pl-3' : ''}
-                                ${heading.level === 3 ? 'pl-5' : ''}
-                                ${heading.level === 4 ? 'pl-7' : ''}
-                                ${heading.level >= 5 ? 'pl-9' : ''}
-                                ${activeId === heading.id
-                                    ? 'text-foreground bg-muted/50'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                                }
-                            `}
+                            className={`text-left text-sm transition-colors ${activeId === heading.id
+                                ? 'text-foreground'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
                         >
                             {heading.text}
                         </button>
-                    ))}
-                </nav>
-            </div>
-        </>
+                    </li>
+                ))}
+            </ul>
+        </nav>
     );
 }
