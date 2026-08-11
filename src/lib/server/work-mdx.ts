@@ -4,23 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import { WorkMeta } from '@/types';
 import rehypePrettyCode from 'rehype-pretty-code';
-import { transformerCopyButton } from '@rehype-pretty/transformers';
+import { prettyCodeOptions } from './mdx-options';
 import matter from 'gray-matter';
 
 const WORK_PATH = path.join(process.cwd(), 'src/content/work');
 
-const options = {
-    theme: 'github-dark',
-    keepBackground: true,
-    bypassInlineCode: true,
-    defaultLang: 'plaintext',
-    transformers: [
-        transformerCopyButton({
-            visibility: 'hover',
-            feedbackDuration: 3_000,
-        }),
-    ],
-};
 
 export async function getWorkBySlug(slug: string) {
     const filePath = path.join(WORK_PATH, `${slug}.mdx`);
@@ -37,7 +25,7 @@ export async function getWorkBySlug(slug: string) {
         options: {
             parseFrontmatter: true,
             mdxOptions: {
-                rehypePlugins: [[rehypePrettyCode, options]],
+                rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
             },
         },
     });

@@ -3,23 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { BlogMeta } from '@/types';
 import rehypePrettyCode from 'rehype-pretty-code';
-import { transformerCopyButton } from '@rehype-pretty/transformers';
+import { prettyCodeOptions } from './mdx-options';
 import matter from 'gray-matter';
 import type React from 'react';
 
 const BLOG_PATH = path.join(process.cwd(), 'src/content/blog');
-const options = {
-    theme: 'github-dark',
-    keepBackground: true,
-    bypassInlineCode: true,
-    defaultLang: 'plaintext',
-    transformers: [
-        transformerCopyButton({
-            visibility: 'hover',
-            feedbackDuration: 3_000,
-        }),
-    ],
-};
 
 export async function getBlogBySlug(slug: string): Promise<{ content: React.ReactNode; frontmatter: BlogMeta; slug: string; rawContent: string } | null> {
     // First, try to find by ID in frontmatter
@@ -52,7 +40,7 @@ export async function getBlogBySlug(slug: string): Promise<{ content: React.Reac
         options: {
             parseFrontmatter: true,
             mdxOptions: {
-                rehypePlugins: [[rehypePrettyCode, options]],
+                rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
             },
         },
     });
