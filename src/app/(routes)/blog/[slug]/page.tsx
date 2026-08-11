@@ -3,9 +3,8 @@ import { getAllBlogs, getBlogBySlug } from '@/lib/server/mdx';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import TableOfContents from '@/components/blog/table-of-contents';
+import ArticleHeader from '@/components/common/article-header';
 
 type Props = {
     params: Promise<{
@@ -37,88 +36,51 @@ export default async function BlogPage({ params }: Props) {
     const wordCount = contentText ? contentText.split(/\s+/).length : 0;
     const readingTime = Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 
+    const title = blog.frontmatter.title.toLowerCase();
+
     return (
-        <div className="flex-1 bg-background">
-            {/* Simple navigation */}
-            <nav className="border-b border-border/30">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <Link
-                        href="/blog"
-                        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        <p className="text-muted-foreground">
-                            Back to
-                            <i>
-                                <span className="font-petemoss-text text-xl font-medium mr-2"> blogs</span>
-                            </i>
-                        </p>
-                    </Link>
+        <main className="flex-1 container-wide py-16">
+            <ArticleHeader
+                backHref="/blog"
+                backLabel="blogs"
+                meta={formattedDate}
+                title={title}
+                subtitle={`${readingTime} min read`}
+            />
+
+            <article className="article-column mt-24">
+                {blog.frontmatter.image && (
+                    <div className="mb-16 relative rounded-md overflow-hidden aspect-video w-full">
+                        <Image
+                            src={blog.frontmatter.image}
+                            alt={blog.frontmatter.title}
+                            fill
+                            className="object-cover"
+                            priority
+                        />
+                    </div>
+                )}
+
+                <TableOfContents />
+
+                <div className="blog-content" id="blog-content">
+                    {blog.content}
                 </div>
-            </nav>
 
-            {/* Main content with TOC */}
-            <div className="max-w-7xl mx-auto px-6 py-16">
-                <div className="flex flex-col lg:flex-row gap-12">
-                    {/* Table of Contents - Top for mobile, Left for desktop */}
-                    <aside className="lg:w-64 lg:sticky lg:top-8 lg:self-start order-first lg:order-none">
-                        <TableOfContents />
-                    </aside>
-
-                    {/* Main article content */}
-                    <main className="flex-1 max-w-3xl">
-                        <article>
-                            {/* Header */}
-                            <header className="mb-12">
-                                <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight leading-tight">
-                                    {blog.frontmatter.title}
-                                </h1>
-
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
-                                    <time>{formattedDate}</time>
-                                    <span>·</span>
-                                    <span>{readingTime} min read</span>
-                                </div>
-
-                                {/* Featured image */}
-                                {blog.frontmatter.image && (
-                                    <div className="mb-12 relative rounded-lg overflow-hidden aspect-video w-full">
-                                        <Image
-                                            src={blog.frontmatter.image}
-                                            alt={blog.frontmatter.title}
-                                            fill
-                                            className="object-cover"
-                                            priority
-                                        />
-                                    </div>
-                                )}
-                            </header>
-
-                            {/* Content */}
-                            <div className="blog-content" id="blog-content">
-                                {blog.content}
-                            </div>
-
-                            {/* Tags */}
-                            {blog.frontmatter.tags && blog.frontmatter.tags.length > 0 && (
-                                <footer className="mt-16 pt-8 border-t border-border/30">
-                                    <div className="flex flex-wrap gap-2">
-                                        {blog.frontmatter.tags.map((tag: string) => (
-                                            <span
-                                                key={tag}
-                                                className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </footer>
-                            )}
-                        </article>
-                    </main>
-                </div>
-            </div>
-        </div>
+                {blog.frontmatter.tags && blog.frontmatter.tags.length > 0 && (
+                    <footer className="mt-20 flex flex-wrap gap-2">
+                        {blog.frontmatter.tags.map((tag: string) => (
+                            <span
+                                key={tag}
+                                className="text-xs px-3 py-1.5 border border-border rounded-full text-muted-foreground"
+                            >
+                                {tag.toLowerCase()}
+                            </span>
+                        ))}
+                    </footer>
+                )}
+            </article>
+        </main>
     );
 }
 
