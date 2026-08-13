@@ -1,8 +1,10 @@
 import remarkGfm from 'remark-gfm';
+import remarkUnwrapImages from 'remark-unwrap-images';
 import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
 import type { compileMDX } from 'next-mdx-remote/rsc';
 import CodeFigure from '@/components/blog/code-figure';
+import MdxImage from '@/components/blog/mdx-image';
 
 // Taken from compileMDX rather than imported: next-mdx-remote does not expose
 // its option types through the package exports map
@@ -24,7 +26,9 @@ export const mdxOptions: MdxOptions = {
     mdxOptions: {
         // gfm gives tables, strikethrough and task lists, none of which plain
         // mdx supports
-        remarkPlugins: [remarkGfm],
+        // unwrap-images lifts an image out of the paragraph remark puts it in,
+        // so it can carry a figure/figcaption and pick up the wide breakout
+        remarkPlugins: [remarkGfm, remarkUnwrapImages],
         // slug gives every heading a stable id, so the table of contents can
         // link to them and readers can deep-link into a post
         rehypePlugins: [rehypeSlug, [rehypePrettyCode, prettyCodeOptions]],
@@ -33,4 +37,5 @@ export const mdxOptions: MdxOptions = {
 
 export const mdxComponents = {
     figure: CodeFigure,
+    img: MdxImage,
 };

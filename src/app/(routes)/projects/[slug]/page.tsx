@@ -5,6 +5,7 @@ import { getProjectBySlug } from '@/lib/server/projects-mdx';
 import { getAllProjects } from '@/lib/server/content-index';
 import { MoveUpRight } from 'lucide-react';
 import ArticleHeader from '@/components/common/article-header';
+import CoverImage from '@/components/common/cover-image';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -51,6 +52,13 @@ export default async function ProjectPage({ params }: Props) {
             />
 
             <article className="article-column mt-24">
+                {project.frontmatter.image && (
+                    <CoverImage
+                        src={project.frontmatter.image}
+                        alt={project.frontmatter.title ?? slug}
+                    />
+                )}
+
                 <div className="blog-content">
                     {project.content}
                 </div>

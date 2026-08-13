@@ -25,6 +25,7 @@ export interface WorkMeta {
 export interface ProjectMeta {
     title: string;
     description: string;
+    image?: string;
     startDate: string;
     endDate?: string;
     technologies: string[];

@@ -3,7 +3,7 @@ import { getBlogBySlug } from '@/lib/server/mdx';
 import { getAllBlogs } from '@/lib/server/content-index';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
-import Image from 'next/image';
+import CoverImage from '@/components/common/cover-image';
 import TableOfContents from '@/components/blog/table-of-contents';
 import ArticleHeader from '@/components/common/article-header';
 import { extractHeadings } from '@/lib/server/headings';
@@ -53,15 +53,7 @@ export default async function BlogPage({ params }: Props) {
 
             <article className="article-column mt-24">
                 {blog.frontmatter.image && (
-                    <div className="mb-16 relative rounded-md overflow-hidden aspect-video w-full">
-                        <Image
-                            src={blog.frontmatter.image}
-                            alt={blog.frontmatter.title}
-                            fill
-                            className="object-cover"
-                            priority
-                        />
-                    </div>
+                    <CoverImage src={blog.frontmatter.image} alt={blog.frontmatter.title} />
                 )}
 
                 <TableOfContents headings={headings} />
