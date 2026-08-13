@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 
+// One list, rendered twice — the desktop row and the mobile drawer
+const links = [
+    { href: "/work", label: "work" },
+    { href: "/blog", label: "blog" },
+    { href: "/projects", label: "projects" },
+    { href: "/pov", label: "pov" },
+];
+
 export default function Navbar() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -23,9 +31,15 @@ export default function Navbar() {
 
                 {/* Desktop Navigation */}
                 <div className="hidden md:flex gap-4 text-sm md:text-base">
-                    <Link href="/work" className="hover:text-gray-300 transition-colors">work</Link>
-                    <Link href="/blog" className="hover:text-gray-300 transition-colors">blog</Link>
-                    <Link href="/projects" className="hover:text-gray-300 transition-colors">projects</Link>
+                    {links.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="hover:text-gray-300 transition-colors"
+                        >
+                            {link.label}
+                        </Link>
+                    ))}
                 </div>
 
                 {/* Mobile Hamburger Button */}
@@ -52,27 +66,16 @@ export default function Navbar() {
             <div className={`fixed top-0 right-0 h-full w-64 bg-black text-white transform transition-transform duration-300 ease-in-out z-50 md:hidden ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}>
                 <div className="flex flex-col pt-20 px-6">
-                    <Link
-                        href="/work"
-                        className="py-4 text-lg border-b border-gray-800 hover:text-gray-300 transition-colors"
-                        onClick={closeDrawer}
-                    >
-                        work
-                    </Link>
-                    <Link
-                        href="/blog"
-                        className="py-4 text-lg border-b border-gray-800 hover:text-gray-300 transition-colors"
-                        onClick={closeDrawer}
-                    >
-                        blog
-                    </Link>
-                    <Link
-                        href="/projects"
-                        className="py-4 text-lg border-b border-gray-800 hover:text-gray-300 transition-colors"
-                        onClick={closeDrawer}
-                    >
-                        projects
-                    </Link>
+                    {links.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="py-4 text-lg border-b border-gray-800 hover:text-gray-300 transition-colors"
+                            onClick={closeDrawer}
+                        >
+                            {link.label}
+                        </Link>
+                    ))}
                 </div>
             </div>
         </>
