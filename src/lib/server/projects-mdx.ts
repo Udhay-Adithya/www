@@ -2,11 +2,9 @@
 import { compileMDX } from 'next-mdx-remote/rsc';
 import fs from 'fs';
 import path from 'path';
-import { ProjectMeta } from '@/types';
-import rehypePrettyCode from 'rehype-pretty-code';
-import { prettyCodeOptions } from './mdx-options';
 import matter from 'gray-matter';
-
+import { ProjectMeta } from '@/types';
+import { mdxOptions, mdxComponents } from './mdx-options';
 const PROJECTS_PATH = path.join(process.cwd(), 'src/content/projects');
 
 
@@ -22,12 +20,8 @@ export async function getProjectBySlug(slug: string) {
 
     const { content, frontmatter } = await compileMDX<ProjectMeta>({
         source,
-        options: {
-            parseFrontmatter: true,
-            mdxOptions: {
-                rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
-            },
-        },
+        options: mdxOptions,
+        components: mdxComponents,
     });
 
     return {

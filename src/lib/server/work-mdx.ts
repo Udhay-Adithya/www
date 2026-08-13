@@ -2,11 +2,9 @@
 import { compileMDX } from 'next-mdx-remote/rsc';
 import fs from 'fs';
 import path from 'path';
-import { WorkMeta } from '@/types';
-import rehypePrettyCode from 'rehype-pretty-code';
-import { prettyCodeOptions } from './mdx-options';
 import matter from 'gray-matter';
-
+import { WorkMeta } from '@/types';
+import { mdxOptions, mdxComponents } from './mdx-options';
 const WORK_PATH = path.join(process.cwd(), 'src/content/work');
 
 
@@ -22,12 +20,8 @@ export async function getWorkBySlug(slug: string) {
 
     const { content, frontmatter } = await compileMDX<WorkMeta>({
         source,
-        options: {
-            parseFrontmatter: true,
-            mdxOptions: {
-                rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
-            },
-        },
+        options: mdxOptions,
+        components: mdxComponents,
     });
 
     return {

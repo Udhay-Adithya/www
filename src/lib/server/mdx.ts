@@ -2,8 +2,7 @@ import { compileMDX } from 'next-mdx-remote/rsc';
 import fs from 'fs';
 import path from 'path';
 import { BlogMeta } from '@/types';
-import rehypePrettyCode from 'rehype-pretty-code';
-import { prettyCodeOptions } from './mdx-options';
+import { mdxOptions, mdxComponents } from './mdx-options';
 import matter from 'gray-matter';
 import type React from 'react';
 
@@ -37,12 +36,8 @@ export async function getBlogBySlug(slug: string): Promise<{ content: React.Reac
 
     const { content, frontmatter } = await compileMDX<BlogMeta>({
         source,
-        options: {
-            parseFrontmatter: true,
-            mdxOptions: {
-                rehypePlugins: [[rehypePrettyCode, prettyCodeOptions]],
-            },
-        },
+        options: mdxOptions,
+        components: mdxComponents,
     });
 
     return {
