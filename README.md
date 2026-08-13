@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ua.me
 
-## Getting Started
+my personal site — what i do, what i think and what i build.
 
-First, run the development server:
+built with next.js, tailwind and mdx.
+
+## running it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build   # production build
+npm start       # serve the build
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## writing
 
-## Learn More
+content lives in `src/content` as mdx, one file per entry, in `blog`,
+`work` and `projects`. drop a file in and it shows up — pages are
+generated at build time.
 
-To learn more about Next.js, take a look at the following resources:
+posts support gfm (tables, task lists, strikethrough) and syntax
+highlighted code blocks with a copy button. headings get ids
+automatically, so they can be linked to directly.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**blog** — `src/content/blog/<name>.mdx`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```yaml
+---
+id: "FT4C3Y"          # optional 6-char id, used as the url if set
+title: "Factory constructors in Dart"
+date: "2026-03-06"
+description: "..."     # optional
+tags: ["Dart"]         # optional
+image: "/cover.png"    # optional
+---
+```
 
-## Deploy on Vercel
+**work** — `src/content/work/<slug>.mdx`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```yaml
+---
+company: "Digital Fortress Pvt. Ltd."
+role: "Flutter Intern"
+startDate: "2024-09-01"
+endDate: "2024-12-31"  # optional, omit for a current role
+location: "..."        # optional
+description: "..."     # optional
+skills: ["Flutter"]    # optional
+---
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**projects** — `src/content/projects/<slug>.mdx`
+
+```yaml
+---
+title: "VIT-AP Student App"
+description: "..."
+startDate: "2024-06-01"
+endDate: "2025-03-15"  # optional
+technologies: ["Flutter"]
+github: "https://..."  # optional
+---
+```
+
+titles are lowercased when rendered, so write them however reads best.
+
+## layout
+
+```
+src/
+  app/(routes)/     pages
+  components/       ui
+  content/          the mdx
+  lib/server/       reading and rendering the mdx
+```
