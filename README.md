@@ -71,6 +71,45 @@ github: "https://..."  # optional
 
 titles are lowercased when rendered, so write them however reads best.
 
+## images
+
+everything lives under `public/images`, one folder per kind:
+
+```
+public/images/
+  blog/<slug>/      images used by a post
+  work/<slug>/
+  projects/<slug>/
+  pov/              the photographs
+```
+
+reference them by path — in frontmatter for a cover, or inline in the
+body. the quoted part becomes a caption.
+
+```markdown
+![alt text](/images/blog/my-post/diagram.png "an optional caption")
+```
+
+dimensions are read off disk at build time, so images reserve their
+space instead of shifting the page as they load. nothing needs to be
+declared. wide images spill past the text column on large screens.
+
+## pov
+
+drop photos into `public/images/pov` and they appear, newest first,
+sorted by the exif capture date and falling back to the file date.
+there is nothing else to update.
+
+captions are optional. to add one, create `src/content/pov-captions.json`:
+
+```json
+{ "DSC_0142.jpg": "somewhere off the coast" }
+```
+
+photos are committed at full size, so the repo carries them in full.
+`npm run images` prints what they add up to and flags anything over a
+megabyte — it also runs before every build.
+
 ## layout
 
 ```
