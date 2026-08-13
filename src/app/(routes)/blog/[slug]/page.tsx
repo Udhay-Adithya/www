@@ -1,10 +1,12 @@
 // src/app/(routes)/blog/[slug]/page.tsx
-import { getAllBlogs, getBlogBySlug } from '@/lib/server/mdx';
+import { getBlogBySlug } from '@/lib/server/mdx';
+import { getAllBlogs } from '@/lib/server/content-index';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import TableOfContents from '@/components/blog/table-of-contents';
 import ArticleHeader from '@/components/common/article-header';
+import { extractHeadings } from '@/lib/server/headings';
 
 type Props = {
     params: Promise<{
@@ -37,6 +39,7 @@ export default async function BlogPage({ params }: Props) {
     const readingTime = Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 
     const title = blog.frontmatter.title.toLowerCase();
+    const headings = extractHeadings(blog.rawContent ?? '');
 
     return (
         <main className="flex-1 container-wide py-16">
@@ -61,7 +64,7 @@ export default async function BlogPage({ params }: Props) {
                     </div>
                 )}
 
-                <TableOfContents />
+                <TableOfContents headings={headings} />
 
                 <div className="blog-content" id="blog-content">
                     {blog.content}

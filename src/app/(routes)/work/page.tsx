@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { getAllWork } from '@/lib/server/work-mdx';
+import { getAllWork } from '@/lib/server/content-index';
 import SectionHeader from '@/components/common/section-header';
 import ListRow from '@/components/common/list-row';
 

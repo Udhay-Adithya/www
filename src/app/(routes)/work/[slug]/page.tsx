@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import Image from 'next/image';
-import { getAllWork, getWorkBySlug } from '@/lib/server/work-mdx';
+import { getWorkBySlug } from '@/lib/server/work-mdx';
+import { getAllWork } from '@/lib/server/content-index';
 import ArticleHeader from '@/components/common/article-header';
 
 type Props = {

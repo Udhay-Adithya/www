@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { getAllProjects, getProjectBySlug } from '@/lib/server/projects-mdx';
+import { getProjectBySlug } from '@/lib/server/projects-mdx';
+import { getAllProjects } from '@/lib/server/content-index';
 import { MoveUpRight } from 'lucide-react';
 import ArticleHeader from '@/components/common/article-header';
 

@@ -47,26 +47,3 @@ export async function getBlogBySlug(slug: string): Promise<{ content: React.Reac
         rawContent: rawContentWithoutFrontmatter,
     };
 }
-
-export function getAllBlogs(): BlogMeta[] {
-    const files = fs.readdirSync(BLOG_PATH);
-
-    return files
-        .filter((file) => file.endsWith('.mdx'))
-        .map((file) => {
-            const raw = fs.readFileSync(path.join(BLOG_PATH, file), 'utf8');
-            const { data } = matter(raw);
-
-            return {
-                ...(data as BlogMeta),
-                // Use ID if available, otherwise fallback to filename
-                slug: data.id || file.replace(/\.mdx$/, ''),
-            };
-        })
-        .sort((a, b) => {
-            // Sort by date (newest first)
-            const dateA = new Date(a.date).getTime();
-            const dateB = new Date(b.date).getTime();
-            return dateB - dateA;
-        });
-}

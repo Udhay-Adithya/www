@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { getAllProjects } from '@/lib/server/projects-mdx';
+import { getAllProjects } from '@/lib/server/content-index';
 import SectionHeader from '@/components/common/section-header';
 import ListRow from '@/components/common/list-row';
 

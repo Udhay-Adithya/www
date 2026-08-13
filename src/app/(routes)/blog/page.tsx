@@ -1,4 +1,4 @@
-import { getAllBlogs } from '@/lib/server/mdx';
+import { getAllBlogs } from '@/lib/server/content-index';
 import { format } from 'date-fns';
 import SectionHeader from '@/components/common/section-header';
 import ListRow from '@/components/common/list-row';
