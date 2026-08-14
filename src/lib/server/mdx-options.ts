@@ -5,6 +5,7 @@ import rehypeSlug from 'rehype-slug';
 import type { compileMDX } from 'next-mdx-remote/rsc';
 import CodeFigure from '@/components/blog/code-figure';
 import MdxImage from '@/components/blog/mdx-image';
+import Callout from '@/components/blog/callout';
 
 // Taken from compileMDX rather than imported: next-mdx-remote does not expose
 // its option types through the package exports map
@@ -35,7 +36,16 @@ export const mdxOptions: MdxOptions = {
     },
 };
 
+/**
+ * What a post can use.
+ *
+ * Lowercase keys replace the html mdx already produces. Capitalised keys are
+ * available to posts as tags with no import — mdx resolves an unknown
+ * capitalised tag against this map, which is how a post gets a react component
+ * without the bundler compiling the mdx.
+ */
 export const mdxComponents = {
     figure: CodeFigure,
     img: MdxImage,
+    Callout,
 };

@@ -29,6 +29,19 @@ posts support gfm (tables, task lists, strikethrough) and syntax
 highlighted code blocks with a copy button. headings get ids
 automatically, so they can be linked to directly.
 
+posts can also use react components — including interactive ones —
+without importing them:
+
+```mdx
+<Callout label="a note">
+markdown **works** in here too.
+</Callout>
+```
+
+to add one, write the component and register it in `mdxComponents` in
+`src/lib/server/mdx-options.ts`. mdx resolves any capitalised tag
+against that map.
+
 **blog** — `src/content/blog/<name>.mdx`
 
 ```yaml
