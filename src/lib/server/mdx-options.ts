@@ -2,6 +2,7 @@ import remarkGfm from 'remark-gfm';
 import remarkUnwrapImages from 'remark-unwrap-images';
 import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
+import { monoTheme } from './code-theme';
 import type { compileMDX } from 'next-mdx-remote/rsc';
 import CodeFigure from '@/components/blog/code-figure';
 import MdxImage from '@/components/blog/mdx-image';
@@ -16,7 +17,7 @@ type MdxOptions = NonNullable<Parameters<typeof compileMDX>[0]['options']>;
 // onto the <pre>; the block picks up the site palette from .blog-content
 // instead, and only the token colours come from the theme.
 const prettyCodeOptions = {
-    theme: 'github-dark',
+    theme: monoTheme,
     keepBackground: false,
     bypassInlineCode: true,
     defaultLang: 'plaintext',
