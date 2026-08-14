@@ -50,7 +50,7 @@ That is why we write model classes with `fromJson` and `toJson`.
 
 ---
 
-### Writing fromJson and toJson
+### Writing `fromJson` and `toJson`
 
 Starting with a flat model, no nested objects:
 
@@ -292,7 +292,7 @@ The `fromJson` methods are mechanical enough that writing them by hand starts to
 
 ---
 
-### Using json_serializable
+### Using `json_serializable`
 
 `json_serializable` generates `fromJson` and `toJson` from annotations. You annotate the class, run a code generator, and it writes the serialization logic.
 
@@ -368,7 +368,7 @@ After this, camelCase Dart fields automatically map to snake_case JSON keys ever
 
 ---
 
-### Nested objects with json_serializable
+### Nested objects with `json_serializable`
 
 Nested objects just need the same annotation:
 

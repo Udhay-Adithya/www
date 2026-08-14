@@ -173,6 +173,17 @@
   font-weight: inherit;
 }
 
+/* The site is lowercase throughout, including post titles. Headings written in
+   title case would otherwise read as a different document. */
+.blog-content :is(h1, h2, h3, h4, h5, h6) {
+  text-transform: lowercase;
+}
+
+/* An identifier is a literal name — registerFactory is not registerfactory */
+.blog-content :is(h1, h2, h3, h4, h5, h6) code {
+  text-transform: none;
+}
+
 .blog-content h1 {
   font-size: 1.5rem;
   margin: 4rem 0 1rem;

@@ -52,7 +52,7 @@ It also scatters access all over the place. With many services, every file ends 
 
 `get_it` solves both of these.
 
-## what get_it is
+## what `get_it` is
 
 `get_it` is a service locator. You register objects with it in one place, then look them up by their type anywhere in the app.
 
@@ -91,7 +91,7 @@ void main() {
 
 `sl` is just a shorthand. You see it a lot in Flutter codebases. It stands for nothing particular, just a convention.
 
-## registerSingleton vs registerLazySingleton
+## `registerSingleton` vs `registerLazySingleton`
 
 `registerSingleton` creates the object immediately when you register it:
 
@@ -109,7 +109,7 @@ For most things, lazy is fine. The object is created only when it is actually ne
 
 Use `registerSingleton` if the object needs to exist immediately, for example if it starts a background process or initializes something on construction.
 
-## registerFactory
+## `registerFactory`
 
 There is also `registerFactory`, which creates a new instance every time you call `sl<SomeClass>()`:
 
