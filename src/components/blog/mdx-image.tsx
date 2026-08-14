@@ -28,11 +28,11 @@ export default async function MdxImage({ src, alt = '', title }: MdxImageProps) 
             width={meta.width}
             height={meta.height}
             sizes={SIZES}
-            className="h-auto w-full rounded-md"
+            className="h-auto w-full"
         />
     ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} className="h-auto w-full rounded-md" />
+        <img src={src} alt={alt} className="h-auto w-full" />
     );
 
     if (!title) return image;

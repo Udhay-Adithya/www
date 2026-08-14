@@ -63,7 +63,7 @@ export default function PhotoGrid({ photos }: PhotoGridProps) {
                         type="button"
                         onClick={() => setOpenIndex(index)}
                         aria-label={photo.caption ?? 'view photo'}
-                        className="group block w-full break-inside-avoid overflow-hidden rounded-md"
+                        className="group block w-full break-inside-avoid overflow-hidden"
                     >
                         <Image
                             src={photo.src}
@@ -95,7 +95,7 @@ export default function PhotoGrid({ photos }: PhotoGridProps) {
                         sizes="100vw"
                         placeholder="blur"
                         blurDataURL={open.blurDataURL}
-                        className="max-h-[85vh] w-auto max-w-full rounded-md object-contain"
+                        className="max-h-[85vh] w-auto max-w-full object-contain"
                         priority
                     />
 

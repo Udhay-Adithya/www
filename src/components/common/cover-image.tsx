@@ -12,7 +12,7 @@ type CoverImageProps = {
  */
 export default function CoverImage({ src, alt }: CoverImageProps) {
     return (
-        <div className="relative mb-16 aspect-video w-full overflow-hidden rounded-md">
+        <div className="relative mb-16 aspect-video w-full overflow-hidden">
             <Image
                 src={src}
                 alt={alt}
