@@ -146,25 +146,30 @@
    Hierarchy comes from vertical rhythm rather than weight or size jumps, so a
    post reads as the same document as the rest of the site. */
 .blog-content {
-  font-size: 1rem;
-  line-height: 1.9;
-  letter-spacing: 0.01em;
-  color: var(--foreground);
+  font-size: 0.9375rem;
+  line-height: 2;
+  letter-spacing: 0.015em;
+  /* Body steps back from full strength so headings and emphasis can come
+     forward without needing to be larger or heavier */
+  color: color-mix(in oklch, var(--foreground) 82%, var(--background));
 }
 
 .blog-content p {
   margin-bottom: 1.75rem;
 }
 
+/* Headings sit at or near body size. They read as headings because they are
+   the full foreground colour against stepped-back body text, and because of
+   the space above them — not because they are big. */
 .blog-content h1,
 .blog-content h2,
 .blog-content h3,
 .blog-content h4,
 .blog-content h5,
 .blog-content h6 {
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.015em;
   color: var(--foreground);
 }
 
@@ -185,26 +190,26 @@
 }
 
 .blog-content h1 {
-  font-size: 1.5rem;
-  margin: 4rem 0 1rem;
+  font-size: 1.125rem;
+  margin: 4.5rem 0 1.25rem;
 }
 
 .blog-content h2 {
-  font-size: 1.25rem;
-  margin: 3.5rem 0 1rem;
+  font-size: 1rem;
+  margin: 4rem 0 1.25rem;
 }
 
 .blog-content h3 {
-  font-size: 1.125rem;
-  margin: 2.5rem 0 0.75rem;
+  font-size: 0.9375rem;
+  margin: 3rem 0 1rem;
 }
 
 .blog-content h4,
 .blog-content h5,
 .blog-content h6 {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   color: var(--muted-foreground);
-  margin: 2rem 0 0.5rem;
+  margin: 2.25rem 0 0.75rem;
 }
 
 /* The article header already sets the space above the content */
@@ -213,7 +218,7 @@
 }
 
 .blog-content a {
-  color: inherit;
+  color: var(--foreground);
   text-decoration: underline;
   text-decoration-color: color-mix(in oklch, var(--foreground) 35%, transparent);
   text-underline-offset: 4px;
@@ -226,6 +231,7 @@
 
 .blog-content strong {
   font-weight: 500;
+  color: var(--foreground);
 }
 
 .blog-content blockquote {

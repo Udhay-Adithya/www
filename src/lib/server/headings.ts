@@ -32,18 +32,32 @@ export function extractHeadings(raw: string): Heading[] {
         const match = HEADING.exec(line);
         if (!match) continue;
 
-        // Strip the inline markup that would otherwise show up in the outline
-        const text = match[2]
-            .replace(/`([^`]+)`/g, '$1')
+        // Strip the inline markup that would otherwise show up in the outline,
+        // leaving backticks in place for now so code can be told apart below
+        const raw = match[2]
             .replace(/\*\*([^*]+)\*\*/g, '$1')
             .replace(/\*([^*]+)\*/g, '$1')
             .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
             .trim();
 
+        // Headings render lowercase, and the outline has to agree with them.
+        // Inline code keeps its case: registerFactory is not registerfactory.
+        const text = raw
+            .split(/(`[^`]+`)/)
+            .map((part) =>
+                part.startsWith('`') && part.endsWith('`')
+                    ? part.slice(1, -1)
+                    : part.toLowerCase()
+            )
+            .join('')
+            .trim();
+
         if (!text) continue;
 
         headings.push({
-            id: slugger.slug(text),
+            // Slugged from the same string rehype-slug sees; github-slugger
+            // lowercases either way, so the casing above cannot shift the id
+            id: slugger.slug(raw.replace(/`/g, '')),
             text,
             level: match[1].length,
         });
