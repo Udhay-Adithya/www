@@ -106,9 +106,13 @@ captions are optional. to add one, create `src/content/pov-captions.json`:
 { "DSC_0142.jpg": "somewhere off the coast" }
 ```
 
-photos are committed at full size, so the repo carries them in full.
-`npm run images` prints what they add up to and flags anything over a
-megabyte — it also runs before every build.
+before committing new photos, run `npm run photos`. it resizes the long
+edge to 2000px and re-encodes at quality 85, in place. do it before the
+first commit — git keeps a full size original forever once it has been
+committed once. re-running is safe; anything already small is skipped.
+
+`npm run images` prints what the images add up to and flags anything
+over a megabyte. it also runs before every build.
 
 ## layout
 
