@@ -1,0 +1,183 @@
+---
+id: "CW8V2K"
+title: "The copyWith problem with nullable fields"
+date: "2026-08-29"
+description: "copyWith written with ?? looks correct, but it cannot tell a parameter you never passed from one you passed as null. Notes on why that happens, and how freezed handles it."
+category: "Development"
+tags: ["Flutter", "Dart", "copyWith", "Immutability", "Freezed"]
+---
+
+I write `copyWith` in almost every model without thinking about it. Recently I tried to set a field back to `null` and nothing happened. The method ran, returned a new object, and the field still had its old value. Took a look at why. Writing it down here.
+
+### the usual copyWith
+
+Here is a model for a carrier pigeon. It has an id, a name, and the message it is currently carrying.
+
+```dart
+class CarrierPigeon {
+  final String id;
+  final String name;
+  final String? message;
+
+  const CarrierPigeon({
+    required this.id,
+    required this.name,
+    this.message,
+  });
+
+  CarrierPigeon copyWith({
+    String? id,
+    String? name,
+    String? message,
+  }) {
+    return CarrierPigeon(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      message: message ?? this.message,
+    );
+  }
+}
+```
+
+`message` is nullable because a pigeon in the air is carrying something and a pigeon back on the roof is not. Nothing unusual so far. This is the `copyWith` everyone writes.
+
+### where it breaks
+
+```dart
+final reginald = CarrierPigeon(
+  id: 'p1',
+  name: 'Reginald',
+  message: 'the eagle has landed',
+);
+
+final promoted = reginald.copyWith(name: 'Sir Reginald');
+final delivered = reginald.copyWith(message: null);
+```
+
+The rename works. The delivery does not. `delivered.message` is still `the eagle has landed`, so Reginald has handed over the note and is somehow still holding it.
+
+Put the two calls that matter next to each other:
+
+```dart
+reginald.copyWith();              // keep carrying whatever it has
+reginald.copyWith(message: null); // it delivered, carry nothing now
+```
+
+These are meant to be different instructions. They produce the same object.
+
+### why it happens
+
+An optional named parameter that you do not pass is `null`. So by the time the body runs, both calls look identical from the inside: `message` is `null` either way, `??` takes the same branch either way, and the old value comes back.
+
+There is nothing wrong with `??`. It just has nothing to work with. `null` is being asked to carry two meanings at once, "no value was given" and "the value is null", and only one of them can win. The one bit of information that would separate them, whether the caller passed anything at all, is already gone before the first line of the method.
+
+### how freezed beautifully handles it
+
+If you use freezed, this case already works:
+
+```dart
+@freezed
+class CarrierPigeon with _$CarrierPigeon {
+  const factory CarrierPigeon({
+    required String id,
+    required String name,
+    String? message,
+  }) = _CarrierPigeon;
+}
+```
+
+`reginald.copyWith(message: null)` returns a pigeon carrying nothing, which is what you wanted the first time. The generated code is worth opening, because the fix is small. Roughly, it looks like this:
+
+```dart
+$Res call({
+  Object? id = null,
+  Object? name = null,
+  Object? message = freezed,
+}) {
+  return _then(_CarrierPigeon(
+    id: null == id ? _value.id : id as String,
+    name: null == name ? _value.name : name as String,
+    message: freezed == message ? _value.message : message as String?,
+  ));
+}
+```
+
+Two things are going on.
+
+The parameter is typed `Object?` instead of `String?`. That widens it enough that `null` becomes an ordinary value it can receive, rather than the only value it can default to.
+
+The default is `freezed`, a constant from the package. It is the same object as the `@freezed` annotation you put on the class, reused here as a marker. No caller is going to pass that by accident, so if `message` still holds it, the parameter genuinely was not provided. Anything else, `null` included, came from the caller and gets used.
+
+For `id` and `name` it keeps `null` as the marker, since those are non nullable and `null` could never be a real value for them. The trick is only needed where `null` is a value someone might actually mean.
+
+### the same trick by hand
+
+You do not need the package to do this. Any object the caller cannot produce works as the marker, and a small private class is the easiest one:
+
+```dart
+class _Unset {
+  const _Unset();
+}
+
+class CarrierPigeon {
+  final String id;
+  final String name;
+  final String? message;
+
+  const CarrierPigeon({
+    required this.id,
+    required this.name,
+    this.message,
+  });
+
+  static const _unset = _Unset();
+
+  CarrierPigeon copyWith({
+    String? id,
+    String? name,
+    Object? message = _unset,
+  }) {
+    return CarrierPigeon(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      message: identical(message, _unset) ? this.message : message as String?,
+    );
+  }
+}
+```
+
+`_Unset` is private, so nothing outside this file can build one and hand it back to you. `identical` compares by reference, which is the point: you are asking whether this is the exact object you put there as a default, not whether it happens to be equal to something.
+
+The cost is the cast. `message` is an `Object?` now, so `copyWith(message: 42)` compiles fine and throws at runtime. Freezed has the same hole, it just keeps it inside a generated file you never read.
+
+### the other way
+
+If you would rather not lose the type, wrap the value in a function:
+
+```dart
+CarrierPigeon copyWith({
+  String? id,
+  String? name,
+  String? Function()? message,
+}) {
+  return CarrierPigeon(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    message: message != null ? message() : this.message,
+  );
+}
+```
+
+Not passing anything leaves `message` as `null` and the old value is kept. Passing `() => null` passes a function, which is not `null`, so the method calls it and takes the `null` that comes out.
+
+```dart
+reginald.copyWith(message: () => null);
+```
+
+Type safe, no casts, and the compiler still checks what you put inside the closure. The call site reads a bit strangely, which is the trade you are making.
+
+### closing note
+
+The plain `??` version is fine for non nullable fields, and that covers most of a model most of the time. It only misleads when a field is nullable and `null` is something the caller could legitimately mean.
+
+What I liked about this one is that the fix is not clever. Both versions do the same thing: find some value that means "nothing was passed" and that no caller could produce, so `null` is free to go back to meaning `null`.
