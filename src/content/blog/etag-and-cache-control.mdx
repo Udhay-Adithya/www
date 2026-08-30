@@ -1,0 +1,134 @@
+---
+id: "ET6R4P"
+title: "ETag and Cache-Control in the VIT-AP student app"
+date: "2026-08-30"
+description: "My app was re-downloading the same list of links every time someone opened it, and it kept burning through the free egress limit. Notes on the four headers that fixed it."
+category: "Development"
+tags: ["Flutter", "HTTP", "Caching", "ETag", "Cache-Control", "Supabase", "Vercel"]
+---
+
+The VIT-AP student app has a section called `For You`. It is a list of links, mostly websites: things students built for other students, plus the official university ones, like the events site you register on when there is a fest. The list is small and it barely moves. A few entries get added in a month, sometimes none.
+
+The app was fetching it like it changed every second.
+
+### the limit that kept running out
+
+The list lived in Supabase storage, and the app pulled all of it on every launch. No conditions, no local check, just open the app and download the whole file again.
+
+That is fine at ten users. At around fifteen thousand it is not. The free tier gives 5 GB of egress a month, and 5 GB spread over fifteen thousand people is roughly 350 KB each. Not 350 KB a day. 350 KB for the entire month. For most of them that was a couple of app opens, and then the budget was gone.
+
+It ran out every month, and some months it ran out in the second week. I made a second Supabase account, then a third, and rotated between them. That kept the app alive and fixed nothing, because the actual problem was never the provider. It was that the app kept asking for a file it already had, and the server kept sending it, and nobody in that exchange ever asked whether anything had changed.
+
+### moving it to a json file
+
+I did the blunt thing first. I took the data out of the database, saved it as a plain json file, and hosted it on Vercel. Then I built a small site that owns that file: a request goes from the app to that site, and the site rewrites the json. Nothing is edited by hand and nothing else writes to it.
+
+No rows, no race conditions to think about, no database features I was not using anyway. Almost everything the database was giving me was overhead for what this actually is, which is one small file that occasionally gains a line.
+
+The free allowance on Vercel is much bigger, so the immediate fire went out.
+
+But the app was still doing exactly what it did before. Fifteen thousand devices, several launches a day, each one downloading a file that had not changed since last Tuesday. I had moved the waste somewhere it was affordable. I wanted to know how to actually stop it.
+
+### the two questions
+
+Reading about this is when it clicked that HTTP has had an answer since long before I ran into it. And it splits the problem into two questions, which is the part I found neat:
+
+1. Do I need to make a request at all?
+2. If I do make one, do I need the bytes back?
+
+`Cache-Control` answers the first. `ETag` answers the second. They are separate mechanisms, and you want both, because they save you at different moments.
+
+### what an ETag is
+
+An ETag is a fingerprint of the response body. The server computes it, usually a hash of the file's content, and sends it along:
+
+```http
+GET /for-you.json
+
+200 OK
+ETag: "8f4d2a1c9b"
+Cache-Control: private, max-age=300, stale-while-revalidate=86400
+Content-Length: 48210
+
+{ "items": [ ... ] }
+```
+
+The client stores that string next to the data it just saved. On the next request it sends the fingerprint back, in a header called `If-None-Match`, which reads as what it means: only send me the body if your version does not match this.
+
+```http
+GET /for-you.json
+If-None-Match: "8f4d2a1c9b"
+
+304 Not Modified
+ETag: "8f4d2a1c9b"
+```
+
+`304 Not Modified` has no body at all. The server compared the fingerprints, saw they were the same, and answered with a few lines of headers instead of the whole file. The app hears "nothing changed" and keeps using the copy already on the device.
+
+When the site rewrites the json, the content is different, so the hash is different, so the fingerprint is different. `If-None-Match` stops matching and the server goes back to sending a normal `200` with the new body and a new ETag. Nothing needs to be told that an update happened. The fingerprint falls out of date on its own, which is the whole appeal of it.
+
+The nice thing about hosting a static file is that I did not have to generate any of this. Vercel puts an ETag on static assets for you.
+
+### what Cache-Control does
+
+A 304 is cheap but it is not free. The round trip still happens: the app still opens a connection, still waits on it, still spends a little battery and a little of somebody's mobile data. If the app is opened eight times a day, that is eight conversations to be told nothing changed.
+
+`Cache-Control` is how the server says how long the client can skip the conversation entirely.
+
+```http
+Cache-Control: private, max-age=300, stale-while-revalidate=86400
+```
+
+`max-age=300` means: for the next 300 seconds, this copy is fresh, use it and do not ask me. In those five minutes the app makes no request at all. Zero bytes, no connection. After that the copy is not wrong, it just goes stale, and stale only means the app should check before trusting it again. Checking is where the ETag comes back in and makes that check almost weightless.
+
+`private` is about who is allowed to keep a copy. `public` means anything along the way may store it, including CDNs and proxies that serve many people at once. `private` means only the end client, the one device, may keep it. I used `private` because I wanted this to be one device holding one copy of its own, rather than something sitting in an intermediate cache I would then have to think about invalidating. For data that is identical for every student, `public` would have been defensible too, and would let the CDN carry more of the load. The choice is about who holds the copy, not about anything being secret.
+
+### the stale-while-revalidate part
+
+`max-age` on its own has an awkward edge. The moment the five minutes are up, the next launch has to go and check before it can show anything, and the student is looking at a spinner while a request travels the network only to come back saying nothing changed.
+
+`stale-while-revalidate=86400` removes that wait. It says: once the copy goes stale, you may still use it immediately, for up to a day, as long as you check in the background while you do.
+
+So the order of events on a launch six minutes after the last one is: show the stored list right away, and send the conditional request afterwards. If it comes back `304`, nothing happens and the freshness clock resets. If it comes back `200` with a new file, the new data is saved and shows up on the next launch. Either way nobody waited on the network.
+
+Those two numbers are doing different jobs, which is why the gap between them is so wide. `max-age=300` is short, so a link added to the list reaches people within minutes instead of hours. `stale-while-revalidate=86400` is long, so for a whole day after that the app never blocks on a request. Frequent checks, but no waiting for them, and the checks themselves cost only headers.
+
+Past the day, the copy is old enough that the app should stop trusting it and revalidate properly before showing it.
+
+On Vercel the header goes in `vercel.json`:
+
+```json
+{
+  "headers": [
+    {
+      "source": "/for-you.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, max-age=300, stale-while-revalidate=86400"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### how a week looks with all four
+
+Put together, the traffic for one device over a week goes something like this.
+
+First launch: a normal `200`, the full file, and an ETag saved with it.
+
+Every launch in the next five minutes: no request. The copy is fresh, so the app does not reach for the network.
+
+Launches after that, for the rest of the day: the list appears instantly from the stored copy, and a conditional request carrying `If-None-Match` goes out behind it. A `304` comes back, headers only, and the clock resets.
+
+The moment the site rewrites the json: the next conditional request gets a `200` with the new file and a new ETag, and the cycle continues from there.
+
+The full file goes over the wire when the file changes. That is it. The list changes a few times a month, so the app now downloads it a few times a month, instead of a few times a day per user.
+
+### closing note
+
+What stayed with me is that I did not build a caching system. No version field, no "last updated" endpoint to poll, no push notification telling the app to refresh, all of which I had genuinely considered while staring at the egress graph.
+
+The protocol already had this. The server describes what it sent and how long it stays good, the client remembers the description and quotes it back, and both sides can then agree to say nothing at all. My app was skipping that conversation and spending a whole file's worth of bandwidth, over and over, to be told the same thing it already knew.
