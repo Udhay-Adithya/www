@@ -1,47 +1,85 @@
 ---
 title: "VIT-AP Student App"
-description: "A full-stack offline-first Flutter app to access academic data like attendance, timetable, marks, exam schedule, grades and faculty info"
-startDate: "2024-06-01"  
-endDate: "2025-03-15"
-technologies: ["Dart", "Flutter", "Riverpod", "Rust", "FFI", "ObjectBox", "MVVM Architecture", "Google Analytics"]
+description: "An offline-first app for the VIT-AP university portal"
+image: "/images/projects/preview.png"
+startDate: "2024-06-01"
+technologies: ["Dart", "Flutter", "Riverpod", "Rust", "flutter_rust_bridge", "FFI", "ObjectBox", "MVVM Architecture", "Python"]
 github: "https://github.com/VITAP-Student-Project/vitap_student_app"
 ---
 
-## Overview
-A comprehensive mobile application designed to streamline academic life for VIT-AP students by providing offline-first access to essential academic information including attendance tracking, timetable management, marks viewing, exam scheduling, and faculty information.
+This is the project I have spent the longest on, and the only one that started because something I depended on stopped working.
 
-## Key Features
-- **Offline-First Architecture**: Complete functionality without internet connectivity using local data storage
-- **Academic Data Integration**: Real-time access to attendance, timetable, marks, exam schedules, and grades
-- **Faculty Information**: Comprehensive faculty directory with contact details and office hours
-- **Smart Notifications**: Automated reminders for classes, exams, and important announcements
-- **Performance Optimized**: Rust integration for high-performance data processing
-- **Analytics Integration**: Firebase Analytics for user behavior insights and app optimization
+## the portal
 
-## Technical Implementation
-- **Frontend**: Flutter with Dart for cross-platform mobile development
-- **State Management**: Riverpod for efficient and scalable state management
-- **Architecture**: MVVM (Model-View-ViewModel) pattern for clean code separation
-- **Database**: ObjectBox for high-performance local data storage
-- **Performance Layer**: Rust with FFI (Foreign Function Interface) for data processing
-- **Analytics**: Google Analytics for user interaction tracking and insights
+I joined VIT-AP for my BTech in computer science, and like everyone else there I had to live inside VTOP, the university portal. At the time it was a website only, and it was not built for a phone. Old interface, a lot of loading, nothing where you expected it to be.
 
-## Advanced Features
-- **High-Performance Data Processing**: Integrated Rust for efficient API response handling and data parsing
-- **Automated Workflow**: Smart reminder system reducing manual tracking efforts by 70%
-- **User Analytics**: Firebase Analytics tracking across 15+ screens with custom event monitoring
-- **A/B Testing**: Data-driven insights informing iterative testing on user flows and onboarding
-- **Offline Synchronization**: Seamless data sync when connectivity is restored
+Logging in was its own small ritual. A captcha, a username, a complex password you had to remember, and then a session that timed out in fifteen minutes. Checking your attendance between classes meant doing all of that again.
 
-## Performance Metrics
-- **Efficiency Improvement**: 70% reduction in manual tracking efforts through automation
-- **User Engagement**: Comprehensive analytics across 15+ app screens
-- **Data Processing**: Significantly improved API response handling through Rust integration
-- **User Experience**: Iterative improvements based on actionable insights from user analytics
+Nobody enjoyed using it. So when I found the VIT-AP app, the older one that is not around anymore, it felt like someone had quietly fixed my week. Everything was there offline. No captcha, no password to recall, no session dying while I was reading.
 
-## Impact
-- Streamlined academic workflow for VIT-AP students
-- Eliminated manual tracking of academic schedules and deadlines
-- Provided reliable offline access to critical academic information
-- Enhanced user experience through data-driven optimization and A/B testing
-- Established foundation for data-informed product development decisions
+## the app that went away
+
+Then the university rebuilt the site. Same portal really, but the page structure and the endpoints all changed, and the app broke completely.
+
+The people who made it were final year students by then, deep in placements, so they decided to sunset it. That is a fair call to make. It also meant we were all back on the website.
+
+I decided to build it again for the new site, and to build it better this time.
+
+## working out the backend
+
+I started with Python, on the [VTOP API](/projects/vitap-vtop-api) that eventually became its own project.
+
+The first version used Selenium. It worked, and then I learned that it drives a real browser, which makes it painful to host anywhere. So I went looking for something headless and found Beautiful Soup, which parses the html without needing a browser at all.
+
+The other half of the problem was understanding what the new portal was actually doing. I used Burp Suite as an intercepting proxy so I could read every request and response the site made, and then reproduced those requests myself, first with `requests` and later with `httpx`, which suited what I needed better.
+
+It came together slowly, one module at a time. The day I could log in and pull the timetable, biometric and attendance data out of it, the backend felt real enough to build an app on top of.
+
+## finding flutter
+
+So I started the frontend alongside it, which meant picking a stack.
+
+I came across Flutter and liked it almost immediately. It was nothing like web development with html, css and react, which I already disliked. Coming from Java, Dart took no time at all, and I liked how plain it was. The layout system was the part that sold me: rows, columns, widgets nested inside widgets. Every line did the thing it said it did.
+
+I built a first version and shared it only with friends. We all used it and liked it, and it was also full of bugs and pretty limited. I could build an app by then. I had no idea how to structure one. I wrote about that part separately in [how I learnt Flutter](/blog/FL3RN2).
+
+## the rewrite
+
+By my third year I had learned enough about architecture to be embarrassed by the first version, so I rewrote it properly, feature based MVVM this time, and put it on the Play Store and the App Store.
+
+The backend went to Google Cloud as a Docker container, and everything worked. New updates, fixed bugs, new bugs, more updates.
+
+Then the users crossed two thousand and the cloud bill started arriving every month. The app earns nothing, and I do not want it to. So the arrangement was that my biriyani money quietly funded the university's attendance checking, every month, forever.
+
+## the backend moved into the app
+
+A senior I know, [Sai Sanjay](https://sanjay7178.github.io/), came in clutch here. He ported my Python backend to Rust and helped wire it into the app with `flutter_rust_bridge`.
+
+That package generates the binding code between Dart and Rust, and the Rust side is compiled into a native library that ships inside the app. So there is no server in the middle anymore. The app talks to VTOP directly from the phone, which killed the hosting bill and also meant nobody's credentials pass through anything of mine on the way.
+
+We shipped that version, and since then it has been steady. Update by update, adding features, fixing things, breaking things, fixing them again, making it nicer to use.
+
+The repository has crossed a hundred stars on GitHub, which still feels like a lot to me, and a few people contribute to it now.
+
+## what it does
+
+- attendance, timetable, marks, exam schedule, grades, biometric
+- cgpa and completed course credits
+- class notifications
+- apply for outing, and download outing approvals
+- past and pending payments
+- your profile, your faculty's profile, and the full faculty directory
+- view, download and upload assignments
+- view and download course materials uploaded by faculty
+- open the VTOP portal itself in a web view, already logged in
+- a collection of tools built by students for the university, which is the section that taught me about [http caching](/blog/ET6R4P)
+- the weather at Amaravathi
+- a good number of themes
+
+## how it is built
+
+- **Flutter and Dart** on the front, with **Riverpod** for state
+- **Feature based MVVM**, one folder per feature rather than one folder per layer
+- **ObjectBox** for local storage, so the app opens straight into your data and works without a connection
+- **Rust** for the portal client, compiled in and called over **FFI** through `flutter_rust_bridge`
+- **Python and FastAPI** for the original backend, still around as the [VTOP API](/projects/vitap-vtop-api)
