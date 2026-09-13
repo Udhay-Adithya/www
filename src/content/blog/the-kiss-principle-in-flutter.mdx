@@ -1,0 +1,171 @@
+---
+id: "KS3P9D"
+title: "The KISS principle in a Flutter app"
+date: "2026-08-31"
+description: "Notes on keeping things simple, and the four places I keep watching Flutter projects buy complexity they have not needed yet."
+category: "Development"
+tags: ["Flutter", "Dart", "Architecture", "KISS", "Clean Code"]
+---
+
+I am not sure I have earned the right to write this one. I have been building Flutter apps for about two years, which is long enough to have made these mistakes myself and not long enough to be authoritative about architecture. So read this as what I do in my own projects, not as advice from someone with a decade behind them.
+
+### what KISS is
+
+KISS stands for keep it simple, stupid. It came out of the US Navy around 1960, credited to an aircraft engineer named Kelly Johnson. The story usually told about it is that he handed his designers a small set of basic tools and told them the jet had to be repairable with those, by an average mechanic, in the field, under combat conditions.
+
+That framing is the useful part. The goal was never simple for its own sake. It was that the thing had to survive being worked on by a tired person in bad conditions with what they had on them. Which is a fair description of you, six months from now, opening your own code.
+
+### building for ten million users on day one
+
+What I keep noticing, watching people start things, is how much machinery goes in before there is anything to run it on.
+
+The abstractions are real and they are not wrong. Repositories, use cases, layered models, all of it exists because somebody hit a genuine problem and this solved it. It is the timing that is off. These are answers to problems you have on the day you have ten million users, twelve engineers, and three data sources. On day one you have none of those, and you are paying the full cost of the solution while getting nothing back.
+
+The cost is not obvious either, because it does not arrive as one big bill. It arrives as every change from then on being slightly more annoying than it needed to be.
+
+Here are four places I keep seeing it, in the code I read and in code I have written.
+
+### feature first, not layer first
+
+The common layout splits the app by technical layer at the root: `data`, `domain`, `presentation`. Inside each one, the same folders repeat for every feature.
+
+Say you are building an app that tracks samosas. Under that layout it looks like this:
+
+```
+lib/
+  data/
+    models/samosa_model.dart
+    services/samosa_service.dart
+  domain/
+    entities/samosa.dart
+    usecases/get_samosas.dart
+  presentation/
+    screens/samosa_screen.dart
+    notifiers/samosa_notifier.dart
+```
+
+Now add one field. Samosas need a spice level. You are opening six directories in three different parts of the tree to add one thing, and you have to hold the whole map in your head to do it.
+
+The other way is to split by feature first, and let the layers live inside:
+
+```
+lib/
+  features/
+    samosa/
+      samosa.dart
+      samosa_service.dart
+      samosa_notifier.dart
+      samosa_screen.dart
+```
+
+Same files, same separation of concerns, all of it in one folder. Adding the spice level means opening one directory. Deleting the feature means deleting one directory, which is the part people underrate. Under the layer first layout, removing a feature means hunting its leftovers out of six places, so nobody bothers and the leftovers stay.
+
+This is the change I made when I rewrote the VIT-AP app, and it is the one I would do again first.
+
+### the layers that only forward
+
+This is the one I feel most strongly about, because I wrote it before I understood why it existed.
+
+The pattern goes: a use case class, an abstract repository, an implementation of that repository, and finally the API client that actually does the work. Four files to fetch some samosas:
+
+```dart
+// domain/usecases/get_samosas.dart
+class GetSamosas {
+  final SamosaRepository repository;
+  GetSamosas(this.repository);
+
+  Future<List<Samosa>> call() => repository.getSamosas();
+}
+
+// domain/repositories/samosa_repository.dart
+abstract class SamosaRepository {
+  Future<List<Samosa>> getSamosas();
+}
+
+// data/repositories/samosa_repository_impl.dart
+class SamosaRepositoryImpl implements SamosaRepository {
+  final ApiClient api;
+  SamosaRepositoryImpl(this.api);
+
+  @override
+  Future<List<Samosa>> getSamosas() => api.getSamosas();
+}
+```
+
+Read what those files do. The use case forwards to the repository. The repository interface describes forwarding. The implementation forwards to the API client. Three files, no decisions, no rules, nothing that would ever need a test. They exist to be a layer.
+
+When the notifier can just say what it means:
+
+```dart
+class SamosaNotifier extends AsyncNotifier<List<Samosa>> {
+  @override
+  Future<List<Samosa>> build() => ref.read(apiClientProvider).getSamosas();
+}
+```
+
+The abstraction earns its place the moment there is something behind it worth hiding: two sources to pick between, caching, retries, an offline copy, actual business rules, a backend you genuinely expect to swap. Then a repository is doing a job and I will write one happily. What I try not to do is write the shape of the solution before the problem shows up, because a layer that only forwards is not neutral. It still has to be opened, read, understood and changed every time anything passes through it.
+
+### one model, not two
+
+The same instinct produces twin classes. A `SamosaResponseModel` in the data layer that knows about json, a `Samosa` entity in the domain layer for the UI, and a mapper in between to copy fields from one into the other.
+
+```dart
+class SamosaResponseModel {
+  final String id;
+  final String name;
+  final int spiceLevel;
+  // fromJson, toJson
+
+  Samosa toEntity() => Samosa(id: id, name: name, spiceLevel: spiceLevel);
+}
+
+class Samosa {
+  final String id;
+  final String name;
+  final int spiceLevel;
+}
+```
+
+Every field now exists in three places, and adding the spice level means editing all three. The reason given for this is that the UI should not depend on the shape of the API. Which is true, and matters when the API is a mess, or when several endpoints disagree about what a samosa is, and you need one clean shape for the app to work with.
+
+For a normal app talking to a reasonable backend, one class does it:
+
+```dart
+class Samosa {
+  final String id;
+  final String name;
+  final int spiceLevel;
+
+  const Samosa({
+    required this.id,
+    required this.name,
+    required this.spiceLevel,
+  });
+
+  factory Samosa.fromJson(Map<String, dynamic> json) => Samosa(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        spiceLevel: json['spice_level'] as int,
+      );
+}
+```
+
+One file, one place to change. If the API later turns messy, splitting this into two is a small piece of work you will do with the messy payload actually in front of you, which is a much better position to design from than guessing at it now.
+
+### the code that was never written
+
+This last one is not about Flutter.
+
+Generating code has become effortless, and the effort was doing useful work. When writing four files by hand costs an afternoon, you ask whether you need four files. When it costs a sentence, you never ask, and the folder fills up with structure nobody chose.
+
+The code that never gets written cannot break, cannot go stale, does not need a test, and nobody has to read it at three in the morning. That is still the most maintainable code there is, and it is the only kind that got harder to notice you are skipping.
+
+So my rule is: if I cannot say out loud why a layer is there and what it is protecting me from, it does not go in. Not because generated code is bad, it is often fine, but because I am the one who has to keep it alive afterwards, and "the model suggested it" is not an answer I can use six months from now.
+
+### closing note
+
+None of this is an argument against abstraction. It is an argument about when to buy it.
+
+The thing that makes it an easy call, and the thing I wish someone had told me earlier, is that the two mistakes are not the same size. Adding a repository later, once you actually have two data sources, is an afternoon of work with the real requirement in front of you. Removing four layers you never needed means untangling everything that grew through them in the meantime, and it usually does not happen at all, so you keep paying.
+
+Start with the boring version. Let the app tell you what it needs.
