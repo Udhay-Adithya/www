@@ -32,9 +32,12 @@ export default async function BlogPage({ params }: Props) {
         console.error("Error formatting date:", error);
     }
 
-    // Calculate reading time (rough estimate)
+    // Calculate reading time (rough estimate).
+    // Only strip things that actually open like a tag: a bare < in code, as in
+    // `if (value.length < 8)`, would otherwise swallow everything up to the
+    // next > anywhere later in the post.
     const wordsPerMinute = 200;
-    const contentText = (blog.rawContent || '').replace(/<[^>]*>/g, '');
+    const contentText = (blog.rawContent || '').replace(/<\/?[a-zA-Z][^>]*>/g, '');
     const wordCount = contentText ? contentText.split(/\s+/).length : 0;
     const readingTime = Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 
