@@ -332,28 +332,6 @@
   color: var(--muted-foreground);
 }
 
-/* Code and media outgrow the reading measure once there's room for them to,
-   so a wide snippet isn't forced to scroll at a comfortable text width. */
-@media (min-width: 1100px) {
-
-  /* Direct children only — a <pre> wrapped in a <figure> must not take the
-     offset twice */
-  .blog-content > pre,
-  .blog-content > img,
-  .blog-content > figure,
-  .blog-content > table {
-    width: 48.75rem;
-    margin-inline: -5rem;
-    max-width: none;
-  }
-
-  .blog-content > figure > pre,
-  .blog-content > figure > img {
-    width: 100%;
-    margin-inline: 0;
-  }
-}
-
 /* Typography refinements for handcrafted feel */
 .font-petemoss-text {
   font-family: var(--font-petemoss), cursive;
