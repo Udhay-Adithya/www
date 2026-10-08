@@ -2,7 +2,6 @@ import remarkGfm from 'remark-gfm';
 import remarkUnwrapImages from 'remark-unwrap-images';
 import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeSlug from 'rehype-slug';
-import { monoTheme } from './code-theme';
 import type { compileMDX } from 'next-mdx-remote/rsc';
 import CodeFigure from '@/components/blog/code-figure';
 import MdxImage from '@/components/blog/mdx-image';
@@ -15,9 +14,11 @@ type MdxOptions = NonNullable<Parameters<typeof compileMDX>[0]['options']>;
 // Shared across blog, work and project content so the three render identically.
 // keepBackground is off so the theme's own surface colour doesn't get inlined
 // onto the <pre>; the block picks up the site palette from .blog-content
-// instead, and only the token colours come from the theme.
+// instead, and only the token colours come from the theme. github's dimmed
+// palette is the desaturated one, which sits better on a neutral page than
+// the full strength version.
 const prettyCodeOptions = {
-    theme: monoTheme,
+    theme: 'github-dark-dimmed',
     keepBackground: false,
     bypassInlineCode: true,
     defaultLang: 'plaintext',
