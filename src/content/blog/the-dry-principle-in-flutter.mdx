@@ -1,0 +1,129 @@
+---
+id: "DR7Y2M"
+title: "The DRY principle in a Flutter app"
+date: "2026-10-08"
+description: "Notes on what DRY actually says, the card that ended up with nine flags, and the difference between two things that are the same and two things that only look the same."
+category: "Development"
+tags: ["Flutter", "Dart", "Architecture", "DRY", "Clean Code"]
+---
+
+There is a widget in one of my older projects that takes nine named parameters. I wrote the first version of it on a good day, because two screens needed the same card and writing that card twice felt like exactly the thing I had been told not to do. Every parameter after the first two was added by me, one at a time, each for a reason that made sense that afternoon.
+
+No single step was wrong. That is the part worth writing about.
+
+### what DRY actually says
+
+DRY stands for do not repeat yourself. It comes from The Pragmatic Programmer, written by Andy Hunt and Dave Thomas in 1999, and the line in the book is a good deal more specific than the name it travels under:
+
+> Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.
+
+The word doing the work there is knowledge. Not code, not text, not lines. The rule is about facts your system knows, and where each of those facts lives.
+
+The short name lost that. Do not repeat yourself reads as a rule about typing, and once you apply it to typing you start merging things because they look alike. Almost all of the damage I have done in the name of this principle came from that reading.
+
+### the two things that look the same
+
+Here are two validators. One guards a password field, one guards a coupon code.
+
+```dart
+// lib/features/auth/password_field.dart
+String? validatePassword(String value) {
+  if (value.length < 8) return 'too short';
+  return null;
+}
+
+// lib/features/checkout/coupon_field.dart
+String? validateCoupon(String value) {
+  if (value.length < 8) return 'too short';
+  return null;
+}
+```
+
+Same body, same number, same message. Pulling them into one `validateMinLength(8)` is the obvious move and it takes about a minute.
+
+Then security asks for twelve character passwords. You change the shared function, because that is where the rule lives now, and every coupon code in circulation stops validating.
+
+The two functions agreed on a number. They were never the same rule. A password minimum and a coupon length are separate facts that both happened to be eight on the day you looked, and merging them told the codebase they were one fact that could only ever hold one value.
+
+The question that catches this is not do these look the same. It is would these change for the same reason.
+
+### the card with nine flags
+
+The validators are the easy case, because the duplication is small and the damage shows up fast. The widget version takes a year to go wrong, which is why I did not notice mine.
+
+```dart
+// lib/common/widgets/pizza_card.dart
+class PizzaCard extends StatelessWidget {
+  const PizzaCard({
+    super.key,
+    required this.pizza,
+    this.isCompact = false,
+    this.showPrice = true,
+    this.showToppings = true,
+    this.isSelectable = false,
+    this.isLoading = false,
+    this.onTap,
+    this.trailing,
+  });
+```
+
+That began as a card used on two screens. Then search results needed it without a price. Then the basket needed a smaller one. Then the menu needed it selectable. Each of those was one boolean and about ten minutes.
+
+The build method underneath is now three layouts sharing a body, held apart by `if` statements. Five booleans is thirty two combinations, most of which nobody has ever rendered, and a few of which almost certainly do not survive a long pizza name.
+
+The tell is what the parameters are for. `pizza` supplies data and the widget needs it. `isCompact` supplies nothing. It picks between behaviours, which means this is two widgets sharing one name and hoping nobody asks.
+
+What I should have done is let the second screen keep its own card, and share the pieces that genuinely were the same: the price label, the topping row. Those are parts. A card is a layout, and two screens wanting a similar layout is not the same as two screens wanting the same layout.
+
+### where DRY actually pays
+
+None of this is an argument against the principle. It pays everywhere something really is a single fact, and Flutter has two clear examples.
+
+The first is theme data.
+
+```dart
+// lib/theme/app_theme.dart
+final appTheme = ThemeData(
+  colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD64123)),
+  textTheme: const TextTheme(
+    titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+  ),
+);
+```
+
+Our title style is twenty point medium is one fact about the app. Copied into forty widgets it is still one fact, just stored badly, and the day design changes it you are grepping for a number. There is no future in which those forty copies drift apart for good reasons, and that is what makes it safe to centralise.
+
+The second is the model.
+
+```dart
+// lib/features/menu/pizza.dart
+@freezed
+class Pizza with _$Pizza {
+  const factory Pizza({
+    required String id,
+    required String name,
+    required PizzaSize size,
+    @Default(false) bool hasPineapple,
+  }) = _Pizza;
+
+  factory Pizza.fromJson(Map<String, dynamic> json) => _$PizzaFromJson(json);
+}
+```
+
+The field list is the fact. `fromJson`, `toJson`, `copyWith`, `==` and `hashCode` are that same list restated five more times, and every one of them has to be edited the day a field arrives. That is the repetition the principle is actually about, and a generator is the right answer to it. I wrote about getting there with [json_serializable](/blog/JS5N8X), and about what freezed does to [copyWith](/blog/CW8V2K) along the way.
+
+### the rule I use
+
+Three occurrences before I extract anything. The first is a thing. The second might be a coincidence. By the third I can see what varies across them, which is the information I needed in order to design the shared version and did not have on the second.
+
+The sentence I keep coming back to is Sandi Metz's: duplication is far cheaper than the wrong abstraction. Copy pasted code is embarrassing and it is easy to fix, because everything you need is sitting in front of you. A shared thing with nine flags is load bearing by the time you notice it, and fixing it means touching everything that leans on it.
+
+So the check is not how many copies there are. It is whether the copies hold the same knowledge, or only the same shape today.
+
+### closing note
+
+Repetition is easy to see. It shows up in review, it looks careless, and anyone can point at it. That is most of why it gets fixed, and why the fix often happens before anybody has worked out whether the two copies were really one thing.
+
+The wrong abstraction is invisible for the opposite reason. It looks like the responsible version of the code. Nobody opens a file and thinks this function should be two functions, because the parameter that would tell you that arrives a year later, alone, looking reasonable.
+
+Mine is still sitting in that project taking nine named parameters. I have left it there on purpose, because it is the clearest note I have written to myself about this, and because every single one of those parameters was added by someone trying to do the right thing.

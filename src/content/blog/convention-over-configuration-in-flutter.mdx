@@ -1,0 +1,100 @@
+---
+id: "CC5N8T"
+title: "Convention over configuration in Flutter"
+date: "2026-10-09"
+description: "A test file that quietly did not run, the conventions a Flutter project is already standing on, and the ones worth writing down in your own repo."
+category: "Development"
+tags: ["Flutter", "Dart", "Architecture", "Tooling", "Conventions"]
+---
+
+I lost about twenty minutes once to a test file that would not run. The test was fine. The file was called `pizza_repository_tests.dart`, with an s on the end, and `flutter test` only collects files ending in `_test.dart`. Nothing failed and nothing warned me. The suite reported one fewer file than I had written, and the number was close enough to right that I did not stop to count.
+
+That is convention over configuration working exactly as designed. It is also the entire problem with it, in one file name.
+
+### what convention over configuration means
+
+The idea got its name from Ruby on Rails, in the middle of the 2000s. The frameworks it was arguing with wanted you to describe your application to them first: xml files listing which class handled which url, which field mapped to which column, where every piece lived.
+
+Rails took the position that most applications are shaped roughly alike, so the framework may as well assume the common shape and let you write down only the parts that are unusual. Put a file in the expected place under the expected name and it is wired up. Depart from that, and then you configure.
+
+The trade is explicitness for volume. You write a lot less, and in return a fair amount of what your program does is no longer written down anywhere you can read.
+
+### the conventions you are already following
+
+Flutter and Dart took the same deal, and most of it is invisible because it works.
+
+`flutter create` hands you `lib`, `test` and a `pubspec.yaml`, and every tool in the ecosystem assumes all three. The package name in that pubspec is the name your imports use, so changing one without the other breaks every file in the project at once.
+
+Anything directly under `lib` is public api for whoever depends on your package. Anything under `lib/src` is private. Nothing in the language enforces that. The compiler is perfectly happy to let someone import your `src` files, but pub, the documentation tooling and every reasonable consumer treat it as a rule.
+
+`main` is the entry point. `build`, `initState` and `dispose` are the lifecycle, and they carry those names because the framework calls them, not because they read well.
+
+And then the one that does the most work for the least ceremony:
+
+```dart
+// lib/features/menu/pizza.dart
+part 'pizza.g.dart';
+```
+
+Nobody tells `build_runner` where to put the generated file. It is `pizza.g.dart` because this file is `pizza.dart`. The annotation says what to generate, the file name says where it lands, and the `part` directive stitches it back in. Three separate tools agree on all of that without a line of configuration passing between them.
+
+### defaults that flow down
+
+The other half of the deal is defaults.
+
+A widget deep in the tree is not told what its text should look like. It assumes an answer exists somewhere above it and goes asking.
+
+```dart
+// without the convention
+Text('pineapple', style: TextStyle(
+  fontSize: 20,
+  fontWeight: FontWeight.w500,
+  color: Color(0xFF1A1A1A),
+))
+
+// with it
+Text('pineapple', style: Theme.of(context).textTheme.titleLarge)
+```
+
+`MaterialApp` puts a theme above everything, `Theme.of` walks up the tree until it finds one, and the convention is that there will always be one up there to find. You configure it once at the root and the whole app inherits.
+
+This is the [DRY argument](/blog/DR7Y2M) arriving from the other direction. There, the point was that your title style is one fact and deserves one home. Here the point is that the framework already picked the home, so that is one less thing to decide.
+
+### the cost is the exception
+
+Conventions are free while you are inside them. The bill arrives the moment you need the case they did not anticipate.
+
+Generated code is where I meet it most. When `build_runner` has not been run, the error is not that the generator has not been run. It is that `_$PizzaFromJson` is undefined, which is true and almost useless. The first few times, you have to learn that the real answer is a command in another terminal.
+
+The deeper version is that a convention is behaviour nobody wrote down in your repo. When a widget renders in the wrong colour, there is no line to grep for. The value came from a theme set somewhere above it, possibly inside a package you did not write, and finding it means understanding how the lookup works rather than searching for the value. Explicit code is more to read and it tells you where everything came from. Conventions are less to read and they assume you already know. That trade is usually worth taking, and it is still a trade.
+
+### conventions in your own codebase
+
+All of that is the framework's set, which you mostly inherit and obey. The part that is actually yours is the set you choose.
+
+A codebase carries dozens of decisions that only matter in that they get made the same way every time. Where feature code lives. Whether a file is named for the widget or the feature. One state management choice instead of three. Which layer is allowed to know that http exists. None of these have a correct answer. They have a cheap answer, which is any answer, applied everywhere.
+
+I moved the VIT-AP app to [feature first folders](/blog/KS3P9D) for a different reason, but it is a convention in this sense too. The value is not that feature first is right. It is that once it is the rule, nobody has to work out where a file goes ever again.
+
+The version of this that a machine can hold for you is the lint file.
+
+```yaml
+# analysis_options.yaml
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    - prefer_single_quotes
+    - always_use_package_imports
+    - avoid_print
+```
+
+Every rule in there is a decision that used to be a code review comment. `always_use_package_imports` means nobody argues about relative imports again. `avoid_print` means the line you left in while debugging does not ship. The convention stops depending on who is reviewing that day, and on whether they happened to remember.
+
+### closing note
+
+A convention is a decision made once so that nobody has to make it again. That is the whole of the value, and it is larger than it sounds, because most of these decisions do not matter on their own and every one of them costs something to make.
+
+The price is paid at the exception. Everything inside the convention is shorter, and everything outside it is harder than it would have been in a framework that made you say what you meant. For application code that is a good trade, because the common case really is common.
+
+It is worth knowing which ones you are standing on, though. Not to argue with them. Just so that when something behaves in a way you never wrote, the answer arrives faster than twenty minutes.
