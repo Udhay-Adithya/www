@@ -1,0 +1,212 @@
+---
+id: "SL4D6N"
+title: "The SOLID principles in Flutter"
+date: "2026-10-09"
+description: "Notes from sitting down and actually studying the five SOLID principles, written out in Dart with the examples that made each one click."
+category: "Development"
+tags: ["Flutter", "Dart", "Architecture", "SOLID", "Clean Code"]
+---
+
+I had been nodding along to SOLID for a while without being able to say what the letters stood for, so I sat down and studied it properly. These are my notes, cleaned up.
+
+The five of them are Robert C. Martin's. The word SOLID came later, from Michael Feathers, who noticed the five could be ordered into one. All of it is pointed at the same thing: software that is easier to change, maintain and test.
+
+The examples below mostly live in a tiffin delivery app, because the principles make more sense when the code belongs to something.
+
+### s, single responsibility
+
+A class should have one primary responsibility, meaning one coherent reason to change.
+
+This does not mean one method. A class can have ten methods and still be about one thing. What you are counting is reasons to change, not functions.
+
+Here is a screen that has three of them:
+
+```dart
+// lib/features/orders/order_screen.dart
+class _OrderScreenState extends State<OrderScreen> {
+  List<Order> orders = [];
+
+  Future<void> loadOrders() async {
+    final response = await http.get(Uri.parse('$baseUrl/orders'));
+    final decoded = jsonDecode(response.body) as List<dynamic>;
+
+    setState(() {
+      orders = decoded
+          .map((item) => Order.fromJson(item as Map<String, dynamic>))
+          .toList();
+    });
+  }
+}
+```
+
+This file changes when the design changes. It also changes when the endpoint moves. It also changes when the response shape changes. Three unrelated reasons, one file, and every one of them makes you open the widget tree to fix something that has nothing to do with the widget tree.
+
+A Flutter screen should deal with displaying the UI. Fetching and parsing belong somewhere else:
+
+```dart
+// lib/features/orders/order_service.dart
+class OrderService {
+  final ApiClient api;
+  OrderService(this.api);
+
+  Future<List<Order>> todaysOrders() => api.getOrders();
+}
+```
+
+The screen now asks for orders and draws them. When the API changes, you open the service. When the design changes, you open the screen.
+
+### o, open closed
+
+Software entities should be open for extension and closed for modification. When requirements change, prefer adding new behaviour over editing code that already works.
+
+The version that violates it is usually a chain of if statements:
+
+```dart
+class PaymentService {
+  Future<void> pay(String type, double amount) async {
+    if (type == 'razorpay') {
+      // razorpay
+    } else if (type == 'stripe') {
+      // stripe
+    }
+  }
+}
+```
+
+Every new payment method means editing this method again. It is working code that gets reopened every time, and each edit is a chance to break the methods that were already fine.
+
+With an abstraction, the new method is a new file:
+
+```dart
+abstract class PaymentGateway {
+  Future<void> pay(double amount);
+}
+
+class RazorpayGateway implements PaymentGateway {
+  @override
+  Future<void> pay(double amount) async {
+    // razorpay
+  }
+}
+
+class StripeGateway implements PaymentGateway {
+  @override
+  Future<void> pay(double amount) async {
+    // stripe
+  }
+}
+```
+
+Adding UPI tomorrow means writing `UpiGateway` and nothing else. The existing abstraction does not need modification when another implementation is added.
+
+### l, liskov substitution
+
+If B is a subtype of A, code expecting an A should be able to use a B without the expected behaviour breaking.
+
+The textbook example is the clearest one I found, so here it is with birds.
+
+```dart
+abstract class Bird {
+  void fly();
+}
+
+class Penguin implements Bird {
+  @override
+  void fly() {
+    throw UnsupportedError('Penguin cannot fly');
+  }
+}
+```
+
+Anything holding a `Bird` can call `fly` and crash, and the type system said it was fine.
+
+The problem is not that penguins do not fly. The problem is that `Bird` incorrectly promised that every bird could.
+
+So move the promise to where it is true:
+
+```dart
+abstract class Bird {}
+
+abstract class FlyingBird extends Bird {
+  void fly();
+}
+
+class Penguin extends Bird {}
+
+class Eagle extends FlyingBird {
+  @override
+  void fly() {}
+}
+```
+
+A subtype should be safely substitutable for its base type without breaking the assumptions the caller made. If you are writing a method that throws because this particular subclass cannot do the thing, the hierarchy is telling you something.
+
+### i, interface segregation
+
+Clients should not be forced to depend on methods they do not need.
+
+```dart
+abstract class UserService {
+  void login();
+  void logout();
+  void uploadProfilePicture();
+  void exportReports();
+  void manageAdminSettings();
+}
+```
+
+A screen that only needs login and logout now depends on reports and admin settings too. It will never call them, and it still breaks when their signatures change.
+
+Split it along the lines of who actually uses what:
+
+```dart
+abstract class AuthenticationService {
+  void login();
+  void logout();
+}
+
+abstract class ProfileService {
+  void uploadProfilePicture();
+}
+
+abstract class AdminService {
+  void manageAdminSettings();
+}
+```
+
+This makes mocking and testing easier too, which is where I feel it most. Writing a test for login against the first version means implementing five methods, four of them as empty stubs that exist purely to make the compiler happy. Against the second it means implementing two.
+
+### d, dependency inversion
+
+High level code should depend on abstractions, not on concrete implementations.
+
+```dart
+class LoginBloc {
+  final ApiLoginRepository repository = ApiLoginRepository();
+}
+```
+
+The Bloc is tightly coupled to the API implementation. It builds the thing itself, so there is no point at which you could hand it a different one, which also means there is no way to test it without hitting the network.
+
+Depend on the idea instead, and let the caller supply the thing:
+
+```dart
+abstract class LoginRepository {
+  Future<User> login(String email, String password);
+}
+
+class LoginBloc {
+  final LoginRepository repository;
+  LoginBloc(this.repository);
+}
+```
+
+```dart
+// production
+final bloc = LoginBloc(ApiLoginRepository());
+
+// testing
+final bloc = LoginBloc(MockLoginRepository());
+```
+
+Same Bloc, same code path, and the test runs in milliseconds with no server anywhere. The Bloc does not care where the data comes from, which is the whole point of the letter.
